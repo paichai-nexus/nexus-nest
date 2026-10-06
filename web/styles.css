@@ -15,7 +15,15 @@ button { border:0; border-radius:12px; background:#2f6fed; color:white; font-wei
 button:hover { background:#245fcf; }
 .legend { display:flex; flex-wrap:wrap; gap:14px; padding:14px 0; color:#687483; font-size:13px; }
 .legend i { width:11px; height:11px; display:inline-block; border-radius:3px; margin-right:5px; }
-.legend .door { background:#e67e22; }.legend .furniture{background:#6c7a89}.legend .risk{background:#e74c3c}.legend .teacher{background:#2f6fed}
+.legend .door { background:#e67e22; }
+.legend .furniture { background:#6c7a89; }
+.legend .risk { background:#e74c3c; }
+.legend .teacher { background:#2f6fed; }
+.legend .observation { background:#8e44ad; }
+.legend .moved {
+  background:transparent;
+  border:2px dashed #1f9d63;
+}
 #canvasWrap { width:100%; overflow:auto; border-radius:14px; background:#eef2f6; padding:12px; }
 canvas { display:block; width:100%; height:auto; background:#fbfaf4; border:1px solid #dbe1e8; }
 .summary { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:16px 0; }

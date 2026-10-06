@@ -2,6 +2,7 @@ let currentRoom = null;
 let proposedRoom = null;
 let room = null;
 let risks = [];
+let movedFurnitureIds = new Set();
 
 const canvas = document.getElementById('roomCanvas');
 const ctx = canvas.getContext('2d');
@@ -15,6 +16,36 @@ async function requestJson(url, options = {}) {
   }
 
   return res.json();
+}
+
+
+function rectChanged(a, b) {
+  if (!a || !b) return false;
+
+  return (
+    a.x !== b.x ||
+    a.y !== b.y ||
+    a.width !== b.width ||
+    a.height !== b.height
+  );
+}
+
+function updateMovedFurnitureIds() {
+  movedFurnitureIds = new Set();
+
+  if (!currentRoom || !proposedRoom) return;
+
+  const currentById = new Map(
+    currentRoom.furniture.map(item => [item.id, item])
+  );
+
+  for (const proposed of proposedRoom.furniture) {
+    const current = currentById.get(proposed.id);
+
+    if (current && rectChanged(current.rect, proposed.rect)) {
+      movedFurnitureIds.add(proposed.id);
+    }
+  }
 }
 
 function drawRoom() {
@@ -59,6 +90,38 @@ function drawRoom() {
     ctx.fillStyle = '#fff';
     ctx.font = '18px sans-serif';
     ctx.fillText(item.name, r.x + 8, r.y + 24);
+
+    // Improved layout: clearly show furniture that moved
+    if (
+      proposedRoom &&
+      room &&
+      room.id === proposedRoom.id &&
+      movedFurnitureIds.has(item.id)
+    ) {
+      ctx.save();
+
+      ctx.strokeStyle = '#1f9d63';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([12, 8]);
+
+      ctx.strokeRect(
+        r.x - 5,
+        r.y - 5,
+        r.width + 10,
+        r.height + 10
+      );
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#1f9d63';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText(
+        '이동',
+        r.x,
+        Math.max(18, r.y - 12)
+      );
+
+      ctx.restore();
+    }
   }
 
   // Teacher positions
@@ -211,6 +274,8 @@ async function load() {
     requestJson('/api/v1/demo/room'),
     requestJson('/api/v1/demo/proposed')
   ]);
+
+  updateMovedFurnitureIds();
 
   const comparison = await requestJson('/api/v1/compare', {
     method: 'POST',

@@ -104,7 +104,7 @@ def _movement_risks(layout: RoomLayout) -> list[RiskCandidate]:
                 title="좁은 통로 후보",
                 explanation=(
                     f"{a.name}와 {b.name} 사이 여유 폭이 약 {gap:.0f}cm로 "
-                    f"현재 기준({layout.min_passage_cm:.0f}cm)보다 좁습니다."
+                    f"현재 데모 기준({layout.min_passage_cm:.0f}cm)보다 좁습니다."
                 ),
                 related_ids=[a.id, b.id],
                 location=Point(x=(ca.x + cb.x) / 2, y=(ca.y + cb.y) / 2),
@@ -130,7 +130,7 @@ def _evacuation_risks(layout: RoomLayout) -> list[RiskCandidate]:
                     severity=Severity.HIGH,
                     title="출입구·대피동선 방해 후보",
                     explanation=(
-                        f"{item.name}이(가) {door.name} 주변 확보영역 "
+                        f"{item.name}이(가) {door.name} 주변 임시 확보영역 "
                         f"({layout.exit_clearance_cm:.0f}cm)에 들어와 있습니다."
                     ),
                     related_ids=[door.id, item.id],
