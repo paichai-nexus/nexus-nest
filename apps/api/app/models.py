@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Literal, Union
 from pydantic import BaseModel, Field
 
 
@@ -68,7 +68,7 @@ class RiskCandidate(BaseModel):
     explanation: str
     related_ids: list[str]
     location: Point
-    evidence: dict[str, float | int | str | bool] = {}
+    evidence: dict[str, Union[float, int, str, bool]] = {}
     source: Literal["rule", "manual"] = "rule"
     requires_teacher_review: bool = True
 
