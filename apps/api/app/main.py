@@ -41,6 +41,14 @@ def demo_room() -> RoomLayout:
     return RoomLayout.model_validate(data)
 
 
+@app.get("/api/v1/demo/proposed", response_model=RoomLayout)
+def proposed_room() -> RoomLayout:
+    data = json.loads(
+        (CONTRACTS_DIR / "proposed-room.json").read_text(encoding="utf-8")
+    )
+    return RoomLayout.model_validate(data)
+
+
 @app.post("/api/v1/analyze", response_model=AnalysisResult)
 def analyze_room(layout: RoomLayout) -> AnalysisResult:
     return analyze(layout)

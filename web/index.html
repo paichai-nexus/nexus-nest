@@ -18,6 +18,10 @@
       AI/규칙 결과는 <strong>참고용 위험 후보</strong>입니다. 최종 판단과 공간 변경 결정은 교사가 수행합니다.
     </section>
 
+    <section id="compareBanner" class="compare-banner">
+      현재/개선 배치 비교 결과를 계산하고 있습니다.
+    </section>
+
     <section class="grid">
       <article class="card map-card">
         <div class="card-head">
@@ -25,7 +29,11 @@
             <span class="tag">DEMO CLASSROOM</span>
             <h2 id="roomName">교실 불러오는 중...</h2>
           </div>
-          <button id="analyzeBtn">위험 후보 분석</button>
+          <div class="layout-switch">
+            <button id="currentBtn" class="secondary active">현재 배치</button>
+            <button id="proposedBtn" class="secondary">개선 배치</button>
+            <button id="analyzeBtn">다시 분석</button>
+          </div>
         </div>
         <div class="legend">
           <span><i class="door"></i> 출입문</span>

@@ -26,3 +26,67 @@ canvas { display:block; width:100%; height:auto; background:#fbfaf4; border:1px 
 .risk-item h3 { margin:0 0 6px; font-size:15px; }.risk-item p{margin:0;color:#65717d;font-size:13px;line-height:1.45}
 .muted { color:#7d8994; }.integration{margin-top:20px}.integration code,.integration pre{background:#f4f6f8;border-radius:8px}.integration pre{padding:14px;overflow:auto}
 @media(max-width:900px){.grid{grid-template-columns:1fr}header h1{font-size:38px}}
+
+
+/* NEST layout comparison controls */
+.layout-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+button.secondary {
+  background: #eef3fb;
+  color: #425466;
+}
+
+button.secondary:hover {
+  background: #dde8f8;
+}
+
+button.secondary.active {
+  background: #17202a;
+  color: #fff;
+}
+
+.compare-banner {
+  margin: 0 0 20px;
+  padding: 16px 20px;
+  background: #eef7ff;
+  border: 1px solid #cfe3fb;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.compare-banner strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 20px;
+}
+
+.compare-label {
+  color: #3975db;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.compare-delta {
+  font-weight: 800;
+  color: #216a45;
+}
+
+@media(max-width:700px) {
+  .compare-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .layout-switch {
+    justify-content: flex-start;
+  }
+}
