@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEXUS NEST · Classroom Safety MVP</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">PAICHAI NEXUS · SMART ICT MAKERTHON 2026</p>
+      <h1>NEXUS NEST</h1>
+      <p class="subtitle">유치원 교실 공간안전 위험 후보 시각화 MVP</p>
+    </header>
+
+    <section class="notice">
+      AI/규칙 결과는 <strong>참고용 위험 후보</strong>입니다. 최종 판단과 공간 변경 결정은 교사가 수행합니다.
+    </section>
+
+    <section class="grid">
+      <article class="card map-card">
+        <div class="card-head">
+          <div>
+            <span class="tag">DEMO CLASSROOM</span>
+            <h2 id="roomName">교실 불러오는 중...</h2>
+          </div>
+          <button id="analyzeBtn">위험 후보 분석</button>
+        </div>
+        <div class="legend">
+          <span><i class="door"></i> 출입문</span>
+          <span><i class="furniture"></i> 가구</span>
+          <span><i class="risk"></i> 위험 후보</span>
+          <span><i class="teacher"></i> 교사 위치</span>
+        </div>
+        <div id="canvasWrap"><canvas id="roomCanvas" width="900" height="650"></canvas></div>
+      </article>
+
+      <aside class="card result-card">
+        <div class="card-head"><h2>분석 결과</h2><span id="status">대기</span></div>
+        <div id="summary" class="summary"></div>
+        <div id="riskList" class="risk-list"><p class="muted">분석 버튼을 눌러주세요.</p></div>
+      </aside>
+    </section>
+
+    <section class="card integration">
+      <h2>Unity 연동 기준</h2>
+      <p>김승조 팀원의 3D/Drag & Drop 결과를 <code>contracts/sample-room.json</code> 구조로 내보내면 같은 API로 위험 후보를 재분석할 수 있습니다.</p>
+      <pre>POST /api/v1/analyze
+POST /api/v1/compare</pre>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

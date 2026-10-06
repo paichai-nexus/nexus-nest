@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paichai-nexus.github.io/nexus-nest/contracts/room-layout.schema.json",
+  "title": "NEXUS NEST Room Layout",
+  "type": "object",
+  "required": ["id", "name", "width_cm", "height_cm", "furniture", "doors"],
+  "properties": {
+    "id": {"type": "string"},
+    "name": {"type": "string"},
+    "width_cm": {"type": "number", "exclusiveMinimum": 0},
+    "height_cm": {"type": "number", "exclusiveMinimum": 0},
+    "min_passage_cm": {"type": "number", "exclusiveMinimum": 0, "default": 80},
+    "exit_clearance_cm": {"type": "number", "exclusiveMinimum": 0, "default": 100},
+    "furniture": {"type": "array", "items": {"$ref": "#/$defs/furniture"}},
+    "doors": {"type": "array", "items": {"$ref": "#/$defs/door"}},
+    "teacher_positions": {"type": "array", "items": {"$ref": "#/$defs/point"}},
+    "observation_points": {"type": "array", "items": {"$ref": "#/$defs/point"}}
+  },
+  "$defs": {
+    "rect": {
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": {"type": "number", "minimum": 0},
+        "y": {"type": "number", "minimum": 0},
+        "width": {"type": "number", "exclusiveMinimum": 0},
+        "height": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "point": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {"x": {"type": "number"}, "y": {"type": "number"}}
+    },
+    "furniture": {
+      "type": "object",
+      "required": ["id", "name", "rect"],
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "rect": {"$ref": "#/$defs/rect"},
+        "movable": {"type": "boolean", "default": true},
+        "height_cm": {"type": "number", "minimum": 0},
+        "blocks_view": {"type": "boolean", "default": true},
+        "sharp_edge": {"type": "boolean", "default": false}
+      }
+    },
+    "door": {
+      "type": "object",
+      "required": ["id", "rect"],
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "rect": {"$ref": "#/$defs/rect"},
+        "is_emergency_exit": {"type": "boolean", "default": true}
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "id": "demo-classroom",
+  "name": "NEST 데모 교실",
+  "width_cm": 900,
+  "height_cm": 650,
+  "min_passage_cm": 80,
+  "exit_clearance_cm": 100,
+  "doors": [
+    {
+      "id": "door-main",
+      "name": "주 출입문",
+      "rect": {"x": 0, "y": 265, "width": 20, "height": 120},
+      "is_emergency_exit": true
+    }
+  ],
+  "teacher_positions": [
+    {"x": 780, "y": 80}
+  ],
+  "observation_points": [
+    {"x": 120, "y": 540},
+    {"x": 420, "y": 520}
+  ],
+  "furniture": [
+    {
+      "id": "cabinet-1",
+      "name": "높은 수납장",
+      "rect": {"x": 50, "y": 275, "width": 120, "height": 70},
+      "movable": true,
+      "height_cm": 130,
+      "blocks_view": true,
+      "sharp_edge": false
+    },
+    {
+      "id": "table-1",
+      "name": "활동 테이블 A",
+      "rect": {"x": 280, "y": 250, "width": 160, "height": 100},
+      "movable": true,
+      "height_cm": 55,
+      "blocks_view": false,
+      "sharp_edge": true
+    },
+    {
+      "id": "table-2",
+      "name": "활동 테이블 B",
+      "rect": {"x": 495, "y": 250, "width": 160, "height": 100},
+      "movable": true,
+      "height_cm": 55,
+      "blocks_view": false,
+      "sharp_edge": false
+    },
+    {
+      "id": "shelf-1",
+      "name": "교구장",
+      "rect": {"x": 390, "y": 430, "width": 180, "height": 60},
+      "movable": true,
+      "height_cm": 100,
+      "blocks_view": true,
+      "sharp_edge": false
+    }
+  ]
+}
