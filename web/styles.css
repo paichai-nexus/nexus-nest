@@ -13,6 +13,7 @@ header h1 { margin:6px 0 0; font-size:48px; letter-spacing:-2px; }
 .tag { font-size:11px; font-weight:800; color:#3975db; }
 button { border:0; border-radius:12px; background:#2f6fed; color:white; font-weight:800; padding:12px 16px; cursor:pointer; }
 button:hover { background:#245fcf; }
+button:disabled { cursor:not-allowed; opacity:.45; }
 .legend { display:flex; flex-wrap:wrap; gap:14px; padding:14px 0; color:#687483; font-size:13px; }
 .legend i { width:11px; height:11px; display:inline-block; border-radius:3px; margin-right:5px; }
 .legend .door { background:#e67e22; }
@@ -20,10 +21,7 @@ button:hover { background:#245fcf; }
 .legend .risk { background:#e74c3c; }
 .legend .teacher { background:#2f6fed; }
 .legend .observation { background:#8e44ad; }
-.legend .moved {
-  background:transparent;
-  border:2px dashed #1f9d63;
-}
+.legend .moved { background:transparent; border:2px dashed #1f9d63; }
 #canvasWrap { width:100%; overflow:auto; border-radius:14px; background:#eef2f6; padding:12px; }
 canvas { display:block; width:100%; height:auto; background:#fbfaf4; border:1px solid #dbe1e8; }
 .summary { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:16px 0; }
@@ -32,69 +30,33 @@ canvas { display:block; width:100%; height:auto; background:#fbfaf4; border:1px 
 .risk-item { border:1px solid #e7ebf0; border-left:5px solid #f39c12; border-radius:12px; padding:12px; }
 .risk-item.high { border-left-color:#e74c3c; }.risk-item.medium{border-left-color:#f39c12}.risk-item.low{border-left-color:#3498db}
 .risk-item h3 { margin:0 0 6px; font-size:15px; }.risk-item p{margin:0;color:#65717d;font-size:13px;line-height:1.45}
-.muted { color:#7d8994; }.integration{margin-top:20px}.integration code,.integration pre{background:#f4f6f8;border-radius:8px}.integration pre{padding:14px;overflow:auto}
+.muted { color:#7d8994; }.integration{margin-top:20px}.integration code,.integration pre,.field-import code{background:#f4f6f8;border-radius:8px}.integration pre{padding:14px;overflow:auto}
 @media(max-width:900px){.grid{grid-template-columns:1fr}header h1{font-size:38px}}
 
+/* Field Room JSON import */
+.field-import { margin-bottom:20px; }
+.field-import-copy { margin:10px 0 16px; color:#65717d; line-height:1.55; }
+.import-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.file-button { display:inline-flex; align-items:center; justify-content:center; border-radius:12px; background:#2f6fed; color:#fff; font-weight:800; padding:12px 16px; cursor:pointer; }
+.file-button:hover { background:#245fcf; }
+.file-button.secondary-file { background:#eef3fb; color:#425466; }
+.file-button.secondary-file:hover { background:#dde8f8; }
+.file-button input { display:none; }
+.error-text { color:#c0392b; font-weight:800; }
 
 /* NEST layout comparison controls */
-.layout-switch {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-button.secondary {
-  background: #eef3fb;
-  color: #425466;
-}
-
-button.secondary:hover {
-  background: #dde8f8;
-}
-
-button.secondary.active {
-  background: #17202a;
-  color: #fff;
-}
-
-.compare-banner {
-  margin: 0 0 20px;
-  padding: 16px 20px;
-  background: #eef7ff;
-  border: 1px solid #cfe3fb;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.compare-banner strong {
-  display: block;
-  margin-top: 5px;
-  font-size: 20px;
-}
-
-.compare-label {
-  color: #3975db;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .12em;
-}
-
-.compare-delta {
-  font-weight: 800;
-  color: #216a45;
-}
+.layout-switch { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+button.secondary { background:#eef3fb; color:#425466; }
+button.secondary:hover { background:#dde8f8; }
+button.secondary.active { background:#17202a; color:#fff; }
+.compare-banner { margin:0 0 20px; padding:16px 20px; background:#eef7ff; border:1px solid #cfe3fb; border-radius:16px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.compare-banner strong { display:block; margin-top:5px; font-size:20px; }
+.compare-label { color:#3975db; font-size:11px; font-weight:800; letter-spacing:.12em; }
+.compare-delta { font-weight:800; color:#216a45; }
+.compare-delta.neutral { color:#53606d; }
 
 @media(max-width:700px) {
-  .compare-banner {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .layout-switch {
-    justify-content: flex-start;
-  }
+  .compare-banner { align-items:flex-start; flex-direction:column; }
+  .layout-switch { justify-content:flex-start; }
+  .card-head { align-items:flex-start; flex-direction:column; }
 }

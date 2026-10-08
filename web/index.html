@@ -18,6 +18,29 @@
       규칙 기반 분석 결과는 <strong>공간안전 위험 후보를 시각화한 참고자료</strong>입니다. 최종 판단과 공간 변경 결정은 교사가 수행합니다.
     </section>
 
+    <section class="card field-import">
+      <div class="card-head">
+        <div>
+          <span class="tag">FIELD DATA</span>
+          <h2>교실 JSON 불러오기</h2>
+        </div>
+        <span id="importStatus" class="muted">데모 데이터 사용 중</span>
+      </div>
+      <p class="field-import-copy">
+        10/13 현장 측정값을 <code>RoomLayout</code> JSON으로 불러와 같은 위험 분석 엔진으로 검증합니다.
+      </p>
+      <div class="import-actions">
+        <label class="file-button">
+          현재 배치 JSON
+          <input id="currentFile" type="file" accept=".json,application/json" />
+        </label>
+        <label class="file-button secondary-file">
+          개선 배치 JSON
+          <input id="proposedFile" type="file" accept=".json,application/json" />
+        </label>
+      </div>
+    </section>
+
     <section id="compareBanner" class="compare-banner">
       현재/개선 배치 비교 결과를 계산하고 있습니다.
     </section>

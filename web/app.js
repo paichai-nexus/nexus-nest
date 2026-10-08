@@ -18,6 +18,33 @@ async function requestJson(url, options = {}) {
   return res.json();
 }
 
+function setImportStatus(message, isError = false) {
+  const el = document.getElementById('importStatus');
+  el.textContent = message;
+  el.classList.toggle('error-text', isError);
+}
+
+async function readJsonFile(file) {
+  const text = await file.text();
+  return JSON.parse(text);
+}
+
+async function validateRoomLayout(candidate) {
+  await requestJson('/api/v1/analyze', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(candidate)
+  });
+
+  return candidate;
+}
+
+function refreshLayoutButtons() {
+  document.getElementById('currentBtn').disabled = !currentRoom;
+  document.getElementById('proposedBtn').disabled = !proposedRoom;
+}
 
 function rectChanged(a, b) {
   if (!a || !b) return false;
@@ -209,8 +236,13 @@ function renderResult(result) {
 function renderCompareBanner(result) {
   const current = result.current.summary;
   const proposed = result.proposed.summary;
-
-  const reduced = current.total - proposed.total;
+  const delta = proposed.total - current.total;
+  const deltaText =
+    delta < 0
+      ? `위험 후보 ${Math.abs(delta)}건 감소`
+      : delta > 0
+        ? `위험 후보 ${delta}건 증가`
+        : '위험 후보 변화 없음';
 
   document.getElementById('compareBanner').innerHTML = `
     <div>
@@ -222,10 +254,44 @@ function renderCompareBanner(result) {
       </strong>
     </div>
     <div class="compare-delta">
-      위험 후보 ${reduced}건 감소 ·
-      HIGH ${current.high} → ${proposed.high}
+      ${deltaText} · HIGH ${current.high} → ${proposed.high}
     </div>
   `;
+}
+
+function renderComparisonPending() {
+  document.getElementById('compareBanner').innerHTML = `
+    <div>
+      <span class="compare-label">FIELD DATA</span>
+      <strong>현재 배치가 준비되었습니다.</strong>
+    </div>
+    <div class="compare-delta neutral">
+      개선 배치 JSON을 불러오면 Before ↔ After 비교가 활성화됩니다.
+    </div>
+  `;
+}
+
+async function refreshComparison() {
+  updateMovedFurnitureIds();
+  refreshLayoutButtons();
+
+  if (!currentRoom || !proposedRoom) {
+    renderComparisonPending();
+    return;
+  }
+
+  const comparison = await requestJson('/api/v1/compare', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      current: currentRoom,
+      proposed: proposedRoom
+    })
+  });
+
+  renderCompareBanner(comparison);
 }
 
 function setActiveButton(kind) {
@@ -253,10 +319,13 @@ async function analyzeRoom(targetRoom) {
 }
 
 async function selectLayout(kind) {
-  room = kind === 'proposed'
+  const target = kind === 'proposed'
     ? proposedRoom
     : currentRoom;
 
+  if (!target) return;
+
+  room = target;
   risks = [];
 
   setActiveButton(kind);
@@ -269,27 +338,41 @@ async function selectLayout(kind) {
   await analyzeRoom(room);
 }
 
+async function importLayout(kind, file) {
+  if (!file) return;
+
+  try {
+    setImportStatus(`${file.name} 확인 중...`);
+
+    const candidate = await readJsonFile(file);
+    await validateRoomLayout(candidate);
+
+    if (kind === 'current') {
+      currentRoom = candidate;
+      // 실제 현장 현재 배치를 불러오면 데모 개선안과의 잘못된 비교를 막는다.
+      proposedRoom = null;
+    } else {
+      proposedRoom = candidate;
+    }
+
+    await refreshComparison();
+    await selectLayout(kind);
+
+    setImportStatus(`${file.name} 불러오기 완료`);
+  } catch (error) {
+    console.error(error);
+    setImportStatus(`불러오기 실패: ${file.name}`, true);
+    alert(`RoomLayout JSON을 확인해주세요.\n\n${error.message}`);
+  }
+}
+
 async function load() {
   [currentRoom, proposedRoom] = await Promise.all([
     requestJson('/api/v1/demo/room'),
     requestJson('/api/v1/demo/proposed')
   ]);
 
-  updateMovedFurnitureIds();
-
-  const comparison = await requestJson('/api/v1/compare', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      current: currentRoom,
-      proposed: proposedRoom
-    })
-  });
-
-  renderCompareBanner(comparison);
-
+  await refreshComparison();
   await selectLayout('current');
 }
 
@@ -311,6 +394,20 @@ document
     if (room) {
       await analyzeRoom(room);
     }
+  });
+
+document
+  .getElementById('currentFile')
+  .addEventListener('change', async event => {
+    await importLayout('current', event.target.files?.[0]);
+    event.target.value = '';
+  });
+
+document
+  .getElementById('proposedFile')
+  .addEventListener('change', async event => {
+    await importLayout('proposed', event.target.files?.[0]);
+    event.target.value = '';
   });
 
 load().catch(err => {
