@@ -76,10 +76,83 @@
       </aside>
     </section>
 
+
+    <section class="card system-panel">
+      <div class="card-head">
+        <div>
+          <span class="tag">NEST SAFETY TWIN</span>
+          <h2>6기능 통합 안전진단</h2>
+        </div>
+        <span id="systemStatus" class="system-status safe">SAFE</span>
+      </div>
+
+      <p class="system-copy">
+        현재는 Arduino 연결 전 단계로 센서값을 직접 입력합니다.
+        이후 동일한 API에 실제 센서값을 연결합니다.
+      </p>
+
+      <div class="sensor-controls">
+        <label class="sensor-field">
+          <span>초음파 통로 측정값</span>
+          <div class="sensor-input-row">
+            <input
+              id="passageCm"
+              type="number"
+              min="0"
+              step="1"
+              value="100"
+            />
+            <strong>cm</strong>
+          </div>
+        </label>
+
+        <label class="sensor-toggle">
+          <input id="lowLightDetected" type="checkbox" />
+          <span>
+            <strong>저조도 감지</strong>
+            <small>조도센서 PoC</small>
+          </span>
+        </label>
+
+        <label class="sensor-toggle">
+          <input id="wetDetected" type="checkbox" />
+          <span>
+            <strong>바닥 습윤 감지</strong>
+            <small>습윤센서 PoC</small>
+          </span>
+        </label>
+
+        <button id="systemAnalyzeBtn">
+          6기능 통합 분석
+        </button>
+      </div>
+
+      <div id="devicePanel" class="device-panel safe">
+        <div>
+          <span class="device-label">NEST SYSTEM OUTPUT</span>
+          <strong id="deviceOverall">NEST SAFE</strong>
+        </div>
+        <div class="device-values">
+          <span>LED <b id="deviceLed">GREEN</b></span>
+          <span>BUZZER <b id="deviceBuzzer">OFF</b></span>
+          <span>LCD <b id="deviceLcd">RISKS: 0</b></span>
+        </div>
+      </div>
+
+      <div id="systemFeatures" class="feature-grid">
+        <p class="muted">통합 분석을 실행해주세요.</p>
+      </div>
+    </section>
+
     <section class="card integration">
-      <h2>Unity 연동 기준</h2>
-      <p>김승조 팀원의 3D/Drag & Drop 결과를 <code>contracts/sample-room.json</code> 구조로 내보내면 같은 API로 위험 후보를 재분석할 수 있습니다.</p>
-      <pre>POST /api/v1/analyze
+      <h2>Physical Twin · Unity 연동 기준</h2>
+      <p>
+        Unity의 교실 배치와 Arduino 센서값을 동일한 NEST API로 연결합니다.
+        공간분석과 센서 결과는 통합 엔진에서 6개 안전기능으로 결합됩니다.
+      </p>
+      <pre>POST /api/v1/system/analyze
+POST /api/v1/physical-twin/analyze
+POST /api/v1/analyze
 POST /api/v1/compare</pre>
     </section>
   </main>

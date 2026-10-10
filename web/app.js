@@ -366,6 +366,148 @@ async function importLayout(kind, file) {
   }
 }
 
+
+function severityText(severity) {
+  if (severity === 'high') return 'HIGH';
+  if (severity === 'medium') return 'MEDIUM';
+  if (severity === 'low') return 'LOW';
+  return 'SAFE';
+}
+
+function sourceText(sources) {
+  if (!sources || sources.length === 0) {
+    return '현재 위험 없음';
+  }
+
+  return sources
+    .map(source => (
+      source === 'spatial'
+        ? '공간분석'
+        : '센서'
+    ))
+    .join(' + ');
+}
+
+function renderSystemResult(result) {
+  const status = document.getElementById('systemStatus');
+  const devicePanel = document.getElementById('devicePanel');
+
+  const overall = result.device.overall;
+
+  status.textContent = overall.toUpperCase();
+  status.className = `system-status ${overall}`;
+
+  devicePanel.className = `device-panel ${overall}`;
+
+  document.getElementById('deviceOverall').textContent =
+    result.device.lcd_line1;
+
+  document.getElementById('deviceLed').textContent =
+    result.device.led_color.toUpperCase();
+
+  document.getElementById('deviceBuzzer').textContent =
+    result.device.buzzer ? 'ON' : 'OFF';
+
+  document.getElementById('deviceLcd').textContent =
+    result.device.lcd_line2;
+
+  document.getElementById('systemFeatures').innerHTML =
+    result.features.map(feature => `
+      <article
+        class="feature-card
+          ${feature.active ? 'active' : 'safe'}
+          ${feature.severity || ''}"
+      >
+        <div class="feature-card-head">
+          <strong>${feature.label}</strong>
+          <span>
+            ${feature.active
+              ? severityText(feature.severity)
+              : 'SAFE'}
+          </span>
+        </div>
+
+        <p>
+          ${sourceText(feature.sources)}
+        </p>
+
+        <small>
+          ${feature.active
+            ? `위험 후보 ${feature.related_risk_ids.length}건`
+            : '현재 위험 후보 없음'}
+        </small>
+      </article>
+    `).join('');
+}
+
+async function analyzeNestSystem() {
+  if (!room) return;
+
+  const passageInput =
+    document.getElementById('passageCm');
+
+  const passageValue =
+    Number(passageInput.value);
+
+  const payload = {
+    layout: room,
+    sensors: {
+      room_id: room.id,
+
+      passage_cm:
+        Number.isFinite(passageValue)
+          ? passageValue
+          : null,
+
+      passage_min_cm:
+        room.min_passage_cm || 80,
+
+      low_light_detected:
+        document
+          .getElementById('lowLightDetected')
+          .checked,
+
+      wet_detected:
+        document
+          .getElementById('wetDetected')
+          .checked
+    }
+  };
+
+  const button =
+    document.getElementById('systemAnalyzeBtn');
+
+  button.disabled = true;
+  button.textContent = '분석 중...';
+
+  try {
+    const result = await requestJson(
+      '/api/v1/system/analyze',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    renderSystemResult(result);
+  } catch (error) {
+    console.error(error);
+
+    const status =
+      document.getElementById('systemStatus');
+
+    status.textContent = 'ERROR';
+    status.className = 'system-status danger';
+  } finally {
+    button.disabled = false;
+    button.textContent = '6기능 통합 분석';
+  }
+}
+
+
 async function load() {
   [currentRoom, proposedRoom] = await Promise.all([
     requestJson('/api/v1/demo/room'),
@@ -374,6 +516,7 @@ async function load() {
 
   await refreshComparison();
   await selectLayout('current');
+  await analyzeNestSystem();
 }
 
 document
