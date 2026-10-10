@@ -41,6 +41,22 @@
       </div>
     </section>
 
+    <section class="card field-demo-panel">
+      <div class="field-demo-copy">
+        <span class="tag">FIELD VALIDATION DEMO</span>
+        <h2>현장검증 반영 시연</h2>
+        <p>
+          현직 교사 사전 인터뷰를 반영해
+          <strong>시야 사각 × 충돌 위험</strong>을
+          핵심 위험으로 재정의한 시연 데이터입니다.
+        </p>
+      </div>
+
+      <button id="loadFieldDemoBtn">
+        현장검증 시연 불러오기
+      </button>
+    </section>
+
     <section id="compareBanner" class="compare-banner">
       현재/개선 배치 비교 결과를 계산하고 있습니다.
     </section>
@@ -62,6 +78,7 @@
           <span><i class="door"></i> 출입문</span>
           <span><i class="furniture"></i> 가구</span>
           <span><i class="risk"></i> 위험 후보</span>
+          <span><i class="critical"></i> Critical Zone</span>
           <span><i class="teacher"></i> 교사 위치</span>
           <span><i class="observation"></i> 관찰지점</span>
           <span><i class="moved"></i> 이동 가구</span>
@@ -76,10 +93,139 @@
       </aside>
     </section>
 
+
+    <section class="card system-panel">
+      <div class="card-head">
+        <div>
+          <span class="tag">NEST SAFETY TWIN</span>
+          <h2>현장검증 반영 통합 안전진단</h2>
+        </div>
+        <span id="systemStatus" class="system-status safe">SAFE</span>
+      </div>
+
+      <p class="system-copy">
+        현직 유치원 교사 사전 인터뷰를 반영하여
+        <strong>교사 시야 사각 × 가구·모서리 충돌 위험</strong>을
+        CORE 기능으로 우선 분석합니다.
+        일반 위험은 화면·LED 중심으로 알리고,
+        Critical Zone에서만 선택적으로 경고음을 사용합니다.
+      </p>
+
+      <div class="sensor-controls">
+        <label class="sensor-field">
+          <span>초음파 통로 측정값</span>
+          <div class="sensor-input-row">
+            <input
+              id="passageCm"
+              type="number"
+              min="0"
+              step="1"
+              value="100"
+            />
+            <strong>cm</strong>
+          </div>
+        </label>
+
+        <label class="sensor-toggle">
+          <input id="lowLightDetected" type="checkbox" />
+          <span>
+            <strong>저조도 감지</strong>
+            <small>조도센서 PoC</small>
+          </span>
+        </label>
+
+        <label class="sensor-toggle">
+          <input id="wetDetected" type="checkbox" />
+          <span>
+            <strong>바닥 습윤 감지</strong>
+            <small>습윤센서 PoC</small>
+          </span>
+        </label>
+
+        <button id="systemAnalyzeBtn">
+          6기능 통합 분석
+        </button>
+      </div>
+
+      <div class="alert-controls">
+        <label class="alert-toggle">
+          <input
+            id="buzzerEnabled"
+            type="checkbox"
+            checked
+          />
+          <span>
+            <strong>경고음 사용</strong>
+            <small>교사가 직접 ON / OFF</small>
+          </span>
+        </label>
+
+        <label class="alert-mode-field">
+          <span>경고음 정책</span>
+          <select id="buzzerMode">
+            <option value="critical_only" selected>
+              Critical Zone만
+            </option>
+            <option value="high_and_critical">
+              HIGH + Critical
+            </option>
+            <option value="off">
+              경고음 없음
+            </option>
+          </select>
+        </label>
+
+        <div class="field-feedback-note">
+          <strong>FIELD VALIDATION</strong>
+          <span>
+            상시 경고음은 교사에게 스트레스가 될 수 있다는
+            현장 의견을 반영했습니다.
+          </span>
+        </div>
+      </div>
+
+      <section class="critical-zone-section">
+        <div class="critical-zone-head">
+          <div>
+            <span class="tag">CORE FEATURE</span>
+            <h3>시야 사각 × 충돌 위험 Critical Zone</h3>
+          </div>
+          <strong id="criticalZoneCount">0 ZONE</strong>
+        </div>
+
+        <div id="criticalZonePanel" class="critical-zone-list">
+          <p class="muted">
+            현재 Critical Zone이 없습니다.
+          </p>
+        </div>
+      </section>
+
+      <div id="devicePanel" class="device-panel safe">
+        <div>
+          <span class="device-label">NEST SYSTEM OUTPUT</span>
+          <strong id="deviceOverall">NEST SAFE</strong>
+        </div>
+        <div class="device-values">
+          <span>LED <b id="deviceLed">GREEN</b></span>
+          <span>BUZZER <b id="deviceBuzzer">OFF</b></span>
+          <span>LCD <b id="deviceLcd">RISKS: 0</b></span>
+        </div>
+      </div>
+
+      <div id="systemFeatures" class="feature-grid">
+        <p class="muted">통합 분석을 실행해주세요.</p>
+      </div>
+    </section>
+
     <section class="card integration">
-      <h2>Unity 연동 기준</h2>
-      <p>김승조 팀원의 3D/Drag & Drop 결과를 <code>contracts/sample-room.json</code> 구조로 내보내면 같은 API로 위험 후보를 재분석할 수 있습니다.</p>
-      <pre>POST /api/v1/analyze
+      <h2>Physical Twin · Unity 연동 기준</h2>
+      <p>
+        Unity의 교실 배치와 Arduino 센서값을 동일한 NEST API로 연결합니다.
+        공간분석과 센서 결과는 통합 엔진에서 6개 안전기능으로 결합됩니다.
+      </p>
+      <pre>POST /api/v1/system/analyze
+POST /api/v1/physical-twin/analyze
+POST /api/v1/analyze
 POST /api/v1/compare</pre>
     </section>
   </main>

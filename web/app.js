@@ -2,6 +2,7 @@ let currentRoom = null;
 let proposedRoom = null;
 let room = null;
 let risks = [];
+let criticalZones = [];
 let movedFurnitureIds = new Set();
 
 const canvas = document.getElementById('roomCanvas');
@@ -191,6 +192,45 @@ function drawRoom() {
     ctx.fillText('!', p.x, p.y + 6);
     ctx.textAlign = 'start';
   }
+
+  // Field validation CORE:
+  // blind spot × collision Critical Zone
+  for (const zone of criticalZones) {
+    const p = zone.location;
+
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.arc(
+      p.x,
+      p.y,
+      42,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fillStyle = 'rgba(192,57,43,.12)';
+    ctx.fill();
+
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 6;
+    ctx.setLineDash([10, 7]);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#c0392b';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+
+    ctx.fillText(
+      'CRITICAL',
+      p.x,
+      p.y - 50
+    );
+
+    ctx.restore();
+  }
 }
 
 function renderResult(result) {
@@ -270,6 +310,73 @@ function renderComparisonPending() {
     </div>
   `;
 }
+
+async function loadFieldValidationDemo() {
+  const button =
+    document.getElementById('loadFieldDemoBtn');
+
+  button.disabled = true;
+  button.textContent = '현장검증 데이터 불러오는 중...';
+
+  try {
+    const [critical, improved] =
+      await Promise.all([
+        requestJson(
+          '/api/v1/demo/field-critical'
+        ),
+        requestJson(
+          '/api/v1/demo/field-improved'
+        )
+      ]);
+
+    currentRoom = critical;
+    proposedRoom = improved;
+
+    document.getElementById(
+      'passageCm'
+    ).value = 100;
+
+    document.getElementById(
+      'lowLightDetected'
+    ).checked = false;
+
+    document.getElementById(
+      'wetDetected'
+    ).checked = false;
+
+    document.getElementById(
+      'buzzerEnabled'
+    ).checked = true;
+
+    document.getElementById(
+      'buzzerMode'
+    ).value = 'critical_only';
+
+    setImportStatus(
+      '현장검증 시연 데이터 사용 중'
+    );
+
+    await refreshComparison();
+    await selectLayout('current');
+    await analyzeNestSystem();
+
+    button.textContent =
+      '현장검증 시연 로드 완료';
+
+  } catch (error) {
+    console.error(error);
+
+    button.textContent =
+      '현장검증 시연 불러오기';
+
+    alert(
+      `현장검증 시연 데이터를 불러오지 못했습니다.\n\n${error.message}`
+    );
+  } finally {
+    button.disabled = false;
+  }
+}
+
 
 async function refreshComparison() {
   updateMovedFurnitureIds();
@@ -366,6 +473,257 @@ async function importLayout(kind, file) {
   }
 }
 
+
+function featurePriority(key) {
+  if (
+    key === 'blind_spot' ||
+    key === 'collision'
+  ) {
+    return {
+      label: 'CORE',
+      className: 'core'
+    };
+  }
+
+  if (
+    key === 'passage' ||
+    key === 'evacuation'
+  ) {
+    return {
+      label: 'SUPPORT',
+      className: 'support'
+    };
+  }
+
+  return {
+    label: 'EXPERIMENTAL',
+    className: 'experimental'
+  };
+}
+
+
+function renderCriticalZones(result) {
+  criticalZones =
+    result.critical_zones || [];
+
+  const count =
+    document.getElementById(
+      'criticalZoneCount'
+    );
+
+  count.textContent =
+    `${criticalZones.length} ZONE`;
+
+  const panel =
+    document.getElementById(
+      'criticalZonePanel'
+    );
+
+  if (criticalZones.length === 0) {
+    panel.innerHTML = `
+      <p class="muted">
+        시야 사각과 충돌 위험이 결합된
+        Critical Zone이 없습니다.
+      </p>
+    `;
+
+    drawRoom();
+    return;
+  }
+
+  panel.innerHTML =
+    criticalZones.map(zone => `
+      <article class="critical-zone-card">
+        <div class="critical-zone-card-head">
+          <strong>
+            ${zone.title}
+          </strong>
+          <span>CRITICAL</span>
+        </div>
+
+        <p>
+          ${zone.explanation}
+        </p>
+
+        <small>
+          위험 후보 간 거리
+          ${zone.distance_cm}cm
+        </small>
+      </article>
+    `).join('');
+
+  drawRoom();
+}
+
+
+function severityText(severity) {
+  if (severity === 'high') return 'HIGH';
+  if (severity === 'medium') return 'MEDIUM';
+  if (severity === 'low') return 'LOW';
+  return 'SAFE';
+}
+
+function sourceText(sources) {
+  if (!sources || sources.length === 0) {
+    return '현재 위험 없음';
+  }
+
+  return sources
+    .map(source => (
+      source === 'spatial'
+        ? '공간분석'
+        : '센서'
+    ))
+    .join(' + ');
+}
+
+function renderSystemResult(result) {
+  const status = document.getElementById('systemStatus');
+  const devicePanel = document.getElementById('devicePanel');
+
+  const overall = result.device.overall;
+
+  status.textContent = overall.toUpperCase();
+  status.className = `system-status ${overall}`;
+
+  devicePanel.className = `device-panel ${overall}`;
+
+  document.getElementById('deviceOverall').textContent =
+    result.device.lcd_line1;
+
+  document.getElementById('deviceLed').textContent =
+    result.device.led_color.toUpperCase();
+
+  document.getElementById('deviceBuzzer').textContent =
+    result.device.buzzer ? 'ON' : 'OFF';
+
+  document.getElementById('deviceLcd').textContent =
+    result.device.lcd_line2;
+
+  document.getElementById('systemFeatures').innerHTML =
+    result.features.map(feature => {
+      const priority =
+        featurePriority(feature.key);
+
+      return `
+      <article
+        class="feature-card
+          ${feature.active ? 'active' : 'safe'}
+          ${feature.severity || ''}"
+      >
+        <div class="feature-card-head">
+          <div>
+            <span
+              class="priority-badge ${priority.className}"
+            >
+              ${priority.label}
+            </span>
+            <strong>${feature.label}</strong>
+          </div>
+
+          <span>
+            ${feature.active
+              ? severityText(feature.severity)
+              : 'SAFE'}
+          </span>
+        </div>
+
+        <p>
+          ${sourceText(feature.sources)}
+        </p>
+
+        <small>
+          ${feature.active
+            ? `위험 후보 ${feature.related_risk_ids.length}건`
+            : '현재 위험 후보 없음'}
+        </small>
+      </article>
+      `;
+    }).join('');
+
+  renderCriticalZones(result);
+}
+
+async function analyzeNestSystem() {
+  if (!room) return;
+
+  const passageInput =
+    document.getElementById('passageCm');
+
+  const passageValue =
+    Number(passageInput.value);
+
+  const payload = {
+    layout: room,
+    sensors: {
+      room_id: room.id,
+
+      passage_cm:
+        Number.isFinite(passageValue)
+          ? passageValue
+          : null,
+
+      passage_min_cm:
+        room.min_passage_cm || 80,
+
+      low_light_detected:
+        document
+          .getElementById('lowLightDetected')
+          .checked,
+
+      wet_detected:
+        document
+          .getElementById('wetDetected')
+          .checked
+    },
+
+    alerts: {
+      buzzer_enabled:
+        document
+          .getElementById('buzzerEnabled')
+          .checked,
+
+      buzzer_mode:
+        document
+          .getElementById('buzzerMode')
+          .value
+    }
+  };
+
+  const button =
+    document.getElementById('systemAnalyzeBtn');
+
+  button.disabled = true;
+  button.textContent = '분석 중...';
+
+  try {
+    const result = await requestJson(
+      '/api/v1/system/analyze',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    renderSystemResult(result);
+  } catch (error) {
+    console.error(error);
+
+    const status =
+      document.getElementById('systemStatus');
+
+    status.textContent = 'ERROR';
+    status.className = 'system-status danger';
+  } finally {
+    button.disabled = false;
+    button.textContent = '6기능 통합 분석';
+  }
+}
+
+
 async function load() {
   [currentRoom, proposedRoom] = await Promise.all([
     requestJson('/api/v1/demo/room'),
@@ -374,18 +732,28 @@ async function load() {
 
   await refreshComparison();
   await selectLayout('current');
+  await analyzeNestSystem();
 }
+
+document
+  .getElementById('loadFieldDemoBtn')
+  .addEventListener('click', async () => {
+    await loadFieldValidationDemo();
+  });
+
 
 document
   .getElementById('currentBtn')
   .addEventListener('click', async () => {
     await selectLayout('current');
+    await analyzeNestSystem();
   });
 
 document
   .getElementById('proposedBtn')
   .addEventListener('click', async () => {
     await selectLayout('proposed');
+    await analyzeNestSystem();
   });
 
 document
@@ -393,6 +761,7 @@ document
   .addEventListener('click', async () => {
     if (room) {
       await analyzeRoom(room);
+      await analyzeNestSystem();
     }
   });
 
@@ -408,6 +777,19 @@ document
   .addEventListener('change', async event => {
     await importLayout('proposed', event.target.files?.[0]);
     event.target.value = '';
+  });
+
+
+document
+  .getElementById('buzzerEnabled')
+  .addEventListener('change', async () => {
+    await analyzeNestSystem();
+  });
+
+document
+  .getElementById('buzzerMode')
+  .addEventListener('change', async () => {
+    await analyzeNestSystem();
   });
 
 load().catch(err => {

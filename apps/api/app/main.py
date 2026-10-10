@@ -8,8 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .models import AnalysisResult, CompareRequest, CompareResult, RoomLayout
+from .models import (
+    AnalysisResult,
+    CompareRequest,
+    CompareResult,
+    PhysicalAnalysisResult,
+    PhysicalSensorInput,
+    RoomLayout,
+    SystemAnalysisResult,
+    SystemAnalyzeRequest,
+)
+from .physical_engine import analyze_physical
 from .risk_engine import analyze
+from .system_engine import analyze_system
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 CONTRACTS_DIR = BASE_DIR / "contracts"
@@ -49,6 +60,34 @@ def proposed_room() -> RoomLayout:
     return RoomLayout.model_validate(data)
 
 
+@app.get(
+    "/api/v1/demo/field-critical",
+    response_model=RoomLayout,
+)
+def field_critical_room() -> RoomLayout:
+    data = json.loads(
+        (
+            CONTRACTS_DIR
+            / "field-validation-critical-room.json"
+        ).read_text(encoding="utf-8")
+    )
+    return RoomLayout.model_validate(data)
+
+
+@app.get(
+    "/api/v1/demo/field-improved",
+    response_model=RoomLayout,
+)
+def field_improved_room() -> RoomLayout:
+    data = json.loads(
+        (
+            CONTRACTS_DIR
+            / "field-validation-improved-room.json"
+        ).read_text(encoding="utf-8")
+    )
+    return RoomLayout.model_validate(data)
+
+
 @app.post("/api/v1/analyze", response_model=AnalysisResult)
 def analyze_room(layout: RoomLayout) -> AnalysisResult:
     return analyze(layout)
@@ -64,6 +103,28 @@ def compare_layouts(payload: CompareRequest) -> CompareResult:
         delta_total=proposed.summary["total"] - current.summary["total"],
         delta_high=proposed.summary["high"] - current.summary["high"],
     )
+
+
+
+@app.post(
+    "/api/v1/physical-twin/analyze",
+    response_model=PhysicalAnalysisResult,
+)
+def analyze_physical_twin(
+    sensors: PhysicalSensorInput,
+) -> PhysicalAnalysisResult:
+    return analyze_physical(sensors)
+
+
+
+@app.post(
+    "/api/v1/system/analyze",
+    response_model=SystemAnalysisResult,
+)
+def analyze_nest_system(
+    payload: SystemAnalyzeRequest,
+) -> SystemAnalysisResult:
+    return analyze_system(payload)
 
 
 if WEB_DIR.exists():
