@@ -17,6 +17,12 @@ from .models import (
     RoomLayout,
     SystemAnalysisResult,
     SystemAnalyzeRequest,
+    LiveDeviceState,
+    LiveDeviceUpdate,
+)
+from .device_state import (
+    get_live_device,
+    update_live_device,
 )
 from .physical_engine import analyze_physical
 from .risk_engine import analyze
@@ -125,6 +131,24 @@ def analyze_nest_system(
     payload: SystemAnalyzeRequest,
 ) -> SystemAnalysisResult:
     return analyze_system(payload)
+
+
+@app.get(
+    "/api/v1/device/live",
+    response_model=LiveDeviceState,
+)
+def live_device_state() -> LiveDeviceState:
+    return get_live_device()
+
+
+@app.post(
+    "/api/v1/device/live",
+    response_model=LiveDeviceState,
+)
+def update_device_state(
+    update: LiveDeviceUpdate,
+) -> LiveDeviceState:
+    return update_live_device(update)
 
 
 if WEB_DIR.exists():

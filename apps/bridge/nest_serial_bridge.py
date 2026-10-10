@@ -173,6 +173,61 @@ def encode_device_packet(
     )
 
 
+def build_live_update(
+    transport: str,
+    simulated: bool,
+    arduino_connected: bool,
+    layout: Dict[str, Any],
+    raw_sensor: Dict[str, Any],
+    packet: Dict[str, Any],
+) -> Dict[str, Any]:
+    sensor = normalize_sensor_snapshot(
+        raw_sensor,
+        room_id=layout["id"],
+    )
+
+    return {
+        "transport": transport,
+        "simulated": simulated,
+        "bridge_connected": True,
+        "arduino_connected": arduino_connected,
+        "room_id": layout["id"],
+        "sensor": sensor,
+        "device": {
+            "overall": packet["overall"],
+            "led_color": packet["led_color"],
+            "buzzer": packet["buzzer"],
+            "lcd_line1": packet["lcd_line1"],
+            "lcd_line2": packet["lcd_line2"],
+        },
+        "error": None,
+    }
+
+
+def publish_live_update(
+    api_base: str,
+    update: Dict[str, Any],
+) -> None:
+    try:
+        request_json(
+            api_base.rstrip("/")
+            + "/api/v1/device/live",
+            method="POST",
+            payload=update,
+            retries=1,
+        )
+    except (
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        BridgeProtocolError,
+        ValueError,
+    ) as exc:
+        log_event(
+            "live_state_publish_error",
+            error=str(exc),
+        )
+
+
 def request_json(
     url: str,
     method: str = "GET",
@@ -404,6 +459,22 @@ def run_stdio(args: argparse.Namespace) -> int:
                 buzzer_mode=args.buzzer_mode,
             )
 
+            raw_sensor = json.loads(
+                raw_line
+            )
+
+            publish_live_update(
+                api_base=args.api,
+                update=build_live_update(
+                    transport="stdio",
+                    simulated=True,
+                    arduino_connected=False,
+                    layout=layout,
+                    raw_sensor=raw_sensor,
+                    packet=packet,
+                ),
+            )
+
             sys.stdout.write(
                 encode_device_packet(packet)
             )
@@ -481,6 +552,22 @@ def run_serial(args: argparse.Namespace) -> int:
                             layout=layout,
                             buzzer_enabled=not args.buzzer_off,
                             buzzer_mode=args.buzzer_mode,
+                        )
+
+                        raw_sensor = json.loads(
+                            line
+                        )
+
+                        publish_live_update(
+                            api_base=args.api,
+                            update=build_live_update(
+                                transport="serial",
+                                simulated=False,
+                                arduino_connected=True,
+                                layout=layout,
+                                raw_sensor=raw_sensor,
+                                packet=packet,
+                            ),
                         )
 
                         encoded = encode_device_packet(

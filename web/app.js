@@ -644,6 +644,139 @@ function renderSystemResult(result) {
   renderCriticalZones(result);
 }
 
+
+let liveDeviceTimer = null;
+
+function renderLiveDevice(state) {
+  const badge =
+    document.getElementById(
+      'liveDeviceBadge'
+    );
+
+  const isFresh =
+    state &&
+    !state.stale &&
+    state.bridge_connected;
+
+  const mode =
+    !isFresh
+      ? 'offline'
+      : state.simulated
+        ? 'simulated'
+        : 'live';
+
+  badge.textContent =
+    mode === 'live'
+      ? 'LIVE'
+      : mode === 'simulated'
+        ? 'SIMULATED'
+        : 'OFFLINE';
+
+  badge.className =
+    `live-badge ${mode}`;
+
+  document.getElementById(
+    'liveBridge'
+  ).textContent =
+    isFresh ? 'CONNECTED' : 'OFFLINE';
+
+  document.getElementById(
+    'liveArduino'
+  ).textContent =
+    isFresh && state.arduino_connected
+      ? 'CONNECTED'
+      : 'NOT CONNECTED';
+
+  document.getElementById(
+    'liveTransport'
+  ).textContent =
+    (state.transport || 'none')
+      .toUpperCase();
+
+  document.getElementById(
+    'liveLastSeen'
+  ).textContent =
+    state.age_seconds == null
+      ? '-'
+      : `${state.age_seconds.toFixed(1)}s ago`;
+
+  const passage =
+    state.sensor?.passage_cm;
+
+  document.getElementById(
+    'livePassage'
+  ).textContent =
+    passage == null
+      ? '-'
+      : `${passage} cm`;
+
+  const device =
+    state.device;
+
+  document.getElementById(
+    'liveOutput'
+  ).textContent =
+    device
+      ? `${device.led_color.toUpperCase()} · ${
+          device.buzzer ? 'BUZZER ON' : 'BUZZER OFF'
+        }`
+      : '-';
+
+  const note =
+    document.getElementById(
+      'liveDeviceNote'
+    );
+
+  if (!isFresh) {
+    note.textContent =
+      '최근 3초 이내 장치 데이터가 없습니다.';
+  } else if (state.simulated) {
+    note.textContent =
+      'Virtual Arduino 소프트웨어 E2E 데이터입니다. 실제 Arduino 연결 상태가 아닙니다.';
+  } else {
+    note.textContent =
+      '실제 Serial Bridge에서 수신한 최근 장치 상태입니다.';
+  }
+}
+
+
+async function refreshLiveDevice() {
+  try {
+    const state = await requestJson(
+      '/api/v1/device/live'
+    );
+
+    renderLiveDevice(state);
+  } catch (error) {
+    console.error(error);
+
+    renderLiveDevice({
+      stale: true,
+      bridge_connected: false,
+      arduino_connected: false,
+      simulated: false,
+      transport: 'none',
+      age_seconds: null,
+      sensor: null,
+      device: null
+    });
+  }
+}
+
+
+function startLiveDevicePolling() {
+  if (liveDeviceTimer) {
+    clearInterval(liveDeviceTimer);
+  }
+
+  refreshLiveDevice();
+
+  liveDeviceTimer = setInterval(
+    refreshLiveDevice,
+    1000
+  );
+}
+
 async function analyzeNestSystem() {
   if (!room) return;
 
@@ -733,6 +866,7 @@ async function load() {
   await refreshComparison();
   await selectLayout('current');
   await analyzeNestSystem();
+  startLiveDevicePolling();
 }
 
 document

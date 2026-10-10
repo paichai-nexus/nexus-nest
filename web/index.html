@@ -111,6 +111,49 @@
         Critical Zone에서만 선택적으로 경고음을 사용합니다.
       </p>
 
+      <section class="live-device-section">
+        <div class="live-device-head">
+          <div>
+            <span class="tag">LIVE DEVICE</span>
+            <h3>Bridge · Arduino 상태</h3>
+          </div>
+          <span id="liveDeviceBadge" class="live-badge offline">
+            OFFLINE
+          </span>
+        </div>
+
+        <div class="live-device-grid">
+          <div class="live-value">
+            <span>BRIDGE</span>
+            <strong id="liveBridge">OFFLINE</strong>
+          </div>
+          <div class="live-value">
+            <span>ARDUINO</span>
+            <strong id="liveArduino">NOT CONNECTED</strong>
+          </div>
+          <div class="live-value">
+            <span>TRANSPORT</span>
+            <strong id="liveTransport">NONE</strong>
+          </div>
+          <div class="live-value">
+            <span>LAST SENSOR</span>
+            <strong id="liveLastSeen">-</strong>
+          </div>
+          <div class="live-value">
+            <span>PASSAGE</span>
+            <strong id="livePassage">-</strong>
+          </div>
+          <div class="live-value">
+            <span>DEVICE</span>
+            <strong id="liveOutput">-</strong>
+          </div>
+        </div>
+
+        <p id="liveDeviceNote" class="live-device-note">
+          실제 장치 또는 Virtual Arduino 데이터 대기 중
+        </p>
+      </section>
+
       <div class="sensor-controls">
         <label class="sensor-field">
           <span>초음파 통로 측정값</span>
@@ -223,7 +266,9 @@
         Unity의 교실 배치와 Arduino 센서값을 동일한 NEST API로 연결합니다.
         공간분석과 센서 결과는 통합 엔진에서 6개 안전기능으로 결합됩니다.
       </p>
-      <pre>POST /api/v1/system/analyze
+      <pre>GET  /api/v1/device/live
+POST /api/v1/device/live
+POST /api/v1/system/analyze
 POST /api/v1/physical-twin/analyze
 POST /api/v1/analyze
 POST /api/v1/compare</pre>

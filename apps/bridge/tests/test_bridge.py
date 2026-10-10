@@ -198,3 +198,40 @@ def test_process_sensor_line_rejects_array():
             api_base="http://example.test",
             layout={"id": "room-01"},
         )
+
+
+def test_build_live_update():
+    layout = {
+        "id": "room-01",
+    }
+
+    packet = {
+        "type": "device",
+        "overall": "danger",
+        "led_color": "red",
+        "buzzer": True,
+        "lcd_line1": "NEST CRITICAL",
+        "lcd_line2": "ZONES: 1",
+        "active_features": 2,
+        "critical_zones": 1,
+    }
+
+    update = bridge.build_live_update(
+        transport="stdio",
+        simulated=True,
+        arduino_connected=False,
+        layout=layout,
+        raw_sensor={
+            "passage_cm": 100,
+            "low_light_detected": False,
+            "wet_detected": False,
+        },
+        packet=packet,
+    )
+
+    assert update["transport"] == "stdio"
+    assert update["simulated"] is True
+    assert update["bridge_connected"] is True
+    assert update["arduino_connected"] is False
+    assert update["sensor"]["room_id"] == "room-01"
+    assert update["device"]["buzzer"] is True

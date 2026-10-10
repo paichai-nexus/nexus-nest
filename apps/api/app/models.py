@@ -244,3 +244,26 @@ class SystemAnalysisResult(BaseModel):
         "위험 후보 참고정보입니다. 공식 안전검사 또는 교사의 "
         "전문적 판단을 대체하지 않습니다."
     )
+
+class LiveDeviceUpdate(BaseModel):
+    transport: Literal[
+        "none",
+        "serial",
+        "stdio",
+        "mock",
+    ] = "none"
+
+    simulated: bool = False
+    bridge_connected: bool = False
+    arduino_connected: bool = False
+
+    room_id: Optional[str] = None
+    sensor: Optional[PhysicalSensorInput] = None
+    device: Optional[DeviceCommand] = None
+    error: Optional[str] = None
+
+
+class LiveDeviceState(LiveDeviceUpdate):
+    received_at: Optional[str] = None
+    stale: bool = True
+    age_seconds: Optional[float] = None
