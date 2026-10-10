@@ -311,6 +311,73 @@ function renderComparisonPending() {
   `;
 }
 
+async function loadFieldValidationDemo() {
+  const button =
+    document.getElementById('loadFieldDemoBtn');
+
+  button.disabled = true;
+  button.textContent = '현장검증 데이터 불러오는 중...';
+
+  try {
+    const [critical, improved] =
+      await Promise.all([
+        requestJson(
+          '/api/v1/demo/field-critical'
+        ),
+        requestJson(
+          '/api/v1/demo/field-improved'
+        )
+      ]);
+
+    currentRoom = critical;
+    proposedRoom = improved;
+
+    document.getElementById(
+      'passageCm'
+    ).value = 100;
+
+    document.getElementById(
+      'lowLightDetected'
+    ).checked = false;
+
+    document.getElementById(
+      'wetDetected'
+    ).checked = false;
+
+    document.getElementById(
+      'buzzerEnabled'
+    ).checked = true;
+
+    document.getElementById(
+      'buzzerMode'
+    ).value = 'critical_only';
+
+    setImportStatus(
+      '현장검증 시연 데이터 사용 중'
+    );
+
+    await refreshComparison();
+    await selectLayout('current');
+    await analyzeNestSystem();
+
+    button.textContent =
+      '현장검증 시연 로드 완료';
+
+  } catch (error) {
+    console.error(error);
+
+    button.textContent =
+      '현장검증 시연 불러오기';
+
+    alert(
+      `현장검증 시연 데이터를 불러오지 못했습니다.\n\n${error.message}`
+    );
+  } finally {
+    button.disabled = false;
+  }
+}
+
+
 async function refreshComparison() {
   updateMovedFurnitureIds();
   refreshLayoutButtons();
@@ -667,6 +734,13 @@ async function load() {
   await selectLayout('current');
   await analyzeNestSystem();
 }
+
+document
+  .getElementById('loadFieldDemoBtn')
+  .addEventListener('click', async () => {
+    await loadFieldValidationDemo();
+  });
+
 
 document
   .getElementById('currentBtn')

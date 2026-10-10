@@ -514,3 +514,47 @@ button.secondary.active { background:#17202a; color:#fff; }
     grid-template-columns:1fr;
   }
 }
+/* ==========================================================
+   Field validation presentation demo
+   ========================================================== */
+
+.field-demo-panel {
+  margin-bottom:20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  border-color:#cadcf8;
+  background:
+    linear-gradient(
+      135deg,
+      #f7fbff 0%,
+      #ffffff 65%
+    );
+}
+
+.field-demo-copy h2 {
+  margin:4px 0 7px;
+}
+
+.field-demo-copy p {
+  margin:0;
+  color:#65717d;
+  line-height:1.5;
+}
+
+.field-demo-panel button {
+  min-width:210px;
+  white-space:nowrap;
+}
+
+@media(max-width:700px) {
+  .field-demo-panel {
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .field-demo-panel button {
+    width:100%;
+  }
+}
