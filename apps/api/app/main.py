@@ -60,6 +60,34 @@ def proposed_room() -> RoomLayout:
     return RoomLayout.model_validate(data)
 
 
+@app.get(
+    "/api/v1/demo/field-critical",
+    response_model=RoomLayout,
+)
+def field_critical_room() -> RoomLayout:
+    data = json.loads(
+        (
+            CONTRACTS_DIR
+            / "field-validation-critical-room.json"
+        ).read_text(encoding="utf-8")
+    )
+    return RoomLayout.model_validate(data)
+
+
+@app.get(
+    "/api/v1/demo/field-improved",
+    response_model=RoomLayout,
+)
+def field_improved_room() -> RoomLayout:
+    data = json.loads(
+        (
+            CONTRACTS_DIR
+            / "field-validation-improved-room.json"
+        ).read_text(encoding="utf-8")
+    )
+    return RoomLayout.model_validate(data)
+
+
 @app.post("/api/v1/analyze", response_model=AnalysisResult)
 def analyze_room(layout: RoomLayout) -> AnalysisResult:
     return analyze(layout)
