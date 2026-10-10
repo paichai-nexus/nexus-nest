@@ -48,9 +48,18 @@
           <span class="tag">FIELD ROOM EDITOR</span>
           <h2>현장 교실 RoomLayout 입력</h2>
         </div>
-        <span id="editorStatus" class="muted">입력 대기</span>
+        <div class="editor-head-actions">
+          <span id="editorStatus" class="muted">입력 대기</span>
+          <button id="editorToggleBtn"
+                  class="secondary"
+                  type="button"
+                  aria-expanded="false">
+            현장 입력 펼치기
+          </button>
+        </div>
       </div>
 
+      <div id="editorBody" class="room-editor-body collapsed">
       <p class="room-editor-copy">
         10/13 현장에서 교실 크기, 가구, 출입문, 교사 위치와 관찰지점을 입력해
         <code>RoomLayout</code> JSON을 만들고 바로 NEST 분석에 적용합니다.
@@ -78,12 +87,12 @@
         </label>
 
         <label class="editor-field">
-          <span>통로 데모 기준(cm)</span>
+          <span>시제품 임시 통로 기준값(cm)</span>
           <input id="editorMinPassage" type="number" min="1" value="80" />
         </label>
 
         <label class="editor-field">
-          <span>출입문 확보영역(cm)</span>
+          <span>시제품 임시 출입문 확보값(cm)</span>
           <input id="editorExitClearance" type="number" min="1" value="100" />
         </label>
       </div>
@@ -156,6 +165,7 @@
       </div>
 
       <pre id="editorPreview" class="editor-preview">입력값으로 RoomLayout JSON을 생성합니다.</pre>
+      </div>
     </section>
 
     <section class="card field-demo-panel">
@@ -364,6 +374,9 @@
         <div>
           <span class="device-label">NEST SYSTEM OUTPUT</span>
           <strong id="deviceOverall">NEST SAFE</strong>
+          <small class="device-policy-note">
+            종합 위험등급 · 경고음은 Critical Zone 정책에 따름
+          </small>
         </div>
         <div class="device-values">
           <span>LED <b id="deviceLed">GREEN</b></span>

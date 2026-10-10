@@ -24,6 +24,19 @@ let editorFurnitureCounter = 0;
 let editorDoorCounter = 0;
 
 
+function toggleEditor() {
+  const body = document.getElementById('editorBody');
+  const button = document.getElementById('editorToggleBtn');
+  const expanded = button.getAttribute('aria-expanded') === 'true';
+
+  body.classList.toggle('collapsed', expanded);
+  button.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+  button.textContent = expanded
+    ? '현장 입력 펼치기'
+    : '현장 입력 접기';
+}
+
+
 function editorNumber(id, required = true) {
   const input = document.getElementById(id);
   const raw = input.value.trim();
@@ -1378,6 +1391,13 @@ async function load() {
   await analyzeNestSystem();
   startLiveDevicePolling();
 }
+
+
+document
+  .getElementById('editorToggleBtn')
+  .addEventListener('click', () => {
+    toggleEditor();
+  });
 
 
 document
