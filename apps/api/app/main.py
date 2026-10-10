@@ -8,7 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .models import AnalysisResult, CompareRequest, CompareResult, RoomLayout
+from .models import (
+    AnalysisResult,
+    CompareRequest,
+    CompareResult,
+    PhysicalAnalysisResult,
+    PhysicalSensorInput,
+    RoomLayout,
+)
+from .physical_engine import analyze_physical
 from .risk_engine import analyze
 
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -64,6 +72,17 @@ def compare_layouts(payload: CompareRequest) -> CompareResult:
         delta_total=proposed.summary["total"] - current.summary["total"],
         delta_high=proposed.summary["high"] - current.summary["high"],
     )
+
+
+
+@app.post(
+    "/api/v1/physical-twin/analyze",
+    response_model=PhysicalAnalysisResult,
+)
+def analyze_physical_twin(
+    sensors: PhysicalSensorInput,
+) -> PhysicalAnalysisResult:
+    return analyze_physical(sensors)
 
 
 if WEB_DIR.exists():
