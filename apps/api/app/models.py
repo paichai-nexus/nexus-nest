@@ -152,3 +152,39 @@ class PhysicalAnalysisResult(BaseModel):
         "센서 결과와 현재 기준값을 이용한 NEST 시제품의 위험 후보 판단입니다. "
         "공식 안전검사 또는 교사의 전문적 판단을 대체하지 않습니다."
     )
+
+
+
+class SystemAnalyzeRequest(BaseModel):
+    layout: RoomLayout
+    sensors: PhysicalSensorInput
+
+
+class SystemFeatureStatus(BaseModel):
+    key: Literal[
+        "passage",
+        "evacuation",
+        "blind_spot",
+        "collision",
+        "low_light",
+        "wet_floor",
+    ]
+    label: str
+    active: bool
+    severity: Optional[Severity] = None
+    sources: list[Literal["spatial", "sensor"]] = Field(default_factory=list)
+    related_risk_ids: list[str] = Field(default_factory=list)
+
+
+class SystemAnalysisResult(BaseModel):
+    room_id: str
+    features: list[SystemFeatureStatus]
+    active_features: int
+    spatial: AnalysisResult
+    physical: PhysicalAnalysisResult
+    device: DeviceCommand
+    disclaimer: str = (
+        "NEST 통합 결과는 공간분석과 시제품 센서값을 결합한 "
+        "위험 후보 참고정보입니다. 공식 안전검사 또는 교사의 "
+        "전문적 판단을 대체하지 않습니다."
+    )

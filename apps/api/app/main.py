@@ -15,9 +15,12 @@ from .models import (
     PhysicalAnalysisResult,
     PhysicalSensorInput,
     RoomLayout,
+    SystemAnalysisResult,
+    SystemAnalyzeRequest,
 )
 from .physical_engine import analyze_physical
 from .risk_engine import analyze
+from .system_engine import analyze_system
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 CONTRACTS_DIR = BASE_DIR / "contracts"
@@ -83,6 +86,17 @@ def analyze_physical_twin(
     sensors: PhysicalSensorInput,
 ) -> PhysicalAnalysisResult:
     return analyze_physical(sensors)
+
+
+
+@app.post(
+    "/api/v1/system/analyze",
+    response_model=SystemAnalysisResult,
+)
+def analyze_nest_system(
+    payload: SystemAnalyzeRequest,
+) -> SystemAnalysisResult:
+    return analyze_system(payload)
 
 
 if WEB_DIR.exists():
