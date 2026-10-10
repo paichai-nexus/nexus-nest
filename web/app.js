@@ -19,6 +19,516 @@ async function requestJson(url, options = {}) {
   return res.json();
 }
 
+
+let editorFurnitureCounter = 0;
+let editorDoorCounter = 0;
+
+
+function editorNumber(id, required = true) {
+  const input = document.getElementById(id);
+  const raw = input.value.trim();
+
+  if (!raw && !required) {
+    return null;
+  }
+
+  const value = Number(raw);
+
+  if (!Number.isFinite(value)) {
+    throw new Error(`${id} 값이 숫자가 아닙니다.`);
+  }
+
+  return value;
+}
+
+
+function editorPoint(xId, yId) {
+  const x = editorNumber(xId, false);
+  const y = editorNumber(yId, false);
+
+  if (x === null && y === null) {
+    return [];
+  }
+
+  if (x === null || y === null) {
+    throw new Error('좌표 X/Y를 모두 입력해주세요.');
+  }
+
+  return [{ x, y }];
+}
+
+
+function createEditorFurnitureRow(data = {}) {
+  editorFurnitureCounter += 1;
+
+  const id =
+    data.id || `furniture-${editorFurnitureCounter}`;
+
+  const row = document.createElement('div');
+  row.className = 'editor-item furniture-editor-row';
+
+  row.innerHTML = `
+    <div class="editor-item-title">
+      <strong>가구</strong>
+      <button class="editor-remove" type="button">삭제</button>
+    </div>
+
+    <div class="editor-item-grid">
+      <label>
+        <span>ID</span>
+        <input data-key="id" value="${id}" />
+      </label>
+      <label>
+        <span>이름</span>
+        <input data-key="name" value="${data.name || '가구'}" />
+      </label>
+      <label>
+        <span>X</span>
+        <input data-key="x" type="number" min="0" value="${data.rect?.x ?? 0}" />
+      </label>
+      <label>
+        <span>Y</span>
+        <input data-key="y" type="number" min="0" value="${data.rect?.y ?? 0}" />
+      </label>
+      <label>
+        <span>가로</span>
+        <input data-key="width" type="number" min="1" value="${data.rect?.width ?? 100}" />
+      </label>
+      <label>
+        <span>세로</span>
+        <input data-key="height" type="number" min="1" value="${data.rect?.height ?? 100}" />
+      </label>
+      <label>
+        <span>높이(cm)</span>
+        <input data-key="height_cm" type="number" min="0" value="${data.height_cm ?? 60}" />
+      </label>
+    </div>
+
+    <div class="editor-checks">
+      <label>
+        <input data-key="movable" type="checkbox" ${data.movable === false ? '' : 'checked'} />
+        이동 가능
+      </label>
+      <label>
+        <input data-key="blocks_view" type="checkbox" ${data.blocks_view === false ? '' : 'checked'} />
+        시야 차단
+      </label>
+      <label>
+        <input data-key="sharp_edge" type="checkbox" ${data.sharp_edge ? 'checked' : ''} />
+        모서리/돌출 위험
+      </label>
+    </div>
+  `;
+
+  row.querySelector('.editor-remove')
+    .addEventListener('click', () => {
+      row.remove();
+    });
+
+  document.getElementById('editorFurnitureList')
+    .appendChild(row);
+}
+
+
+function createEditorDoorRow(data = {}) {
+  editorDoorCounter += 1;
+
+  const id =
+    data.id || `door-${editorDoorCounter}`;
+
+  const row = document.createElement('div');
+  row.className = 'editor-item door-editor-row';
+
+  row.innerHTML = `
+    <div class="editor-item-title">
+      <strong>출입문</strong>
+      <button class="editor-remove" type="button">삭제</button>
+    </div>
+
+    <div class="editor-item-grid">
+      <label>
+        <span>ID</span>
+        <input data-key="id" value="${id}" />
+      </label>
+      <label>
+        <span>이름</span>
+        <input data-key="name" value="${data.name || '출입문'}" />
+      </label>
+      <label>
+        <span>X</span>
+        <input data-key="x" type="number" min="0" value="${data.rect?.x ?? 0}" />
+      </label>
+      <label>
+        <span>Y</span>
+        <input data-key="y" type="number" min="0" value="${data.rect?.y ?? 0}" />
+      </label>
+      <label>
+        <span>가로</span>
+        <input data-key="width" type="number" min="1" value="${data.rect?.width ?? 80}" />
+      </label>
+      <label>
+        <span>세로</span>
+        <input data-key="height" type="number" min="1" value="${data.rect?.height ?? 20}" />
+      </label>
+    </div>
+
+    <div class="editor-checks">
+      <label>
+        <input data-key="is_emergency_exit" type="checkbox" ${data.is_emergency_exit === false ? '' : 'checked'} />
+        비상·대피 출입문
+      </label>
+    </div>
+  `;
+
+  row.querySelector('.editor-remove')
+    .addEventListener('click', () => {
+      row.remove();
+    });
+
+  document.getElementById('editorDoorList')
+    .appendChild(row);
+}
+
+
+function readEditorItemNumber(row, key) {
+  const input = row.querySelector(`[data-key="${key}"]`);
+  const value = Number(input.value);
+
+  if (!Number.isFinite(value)) {
+    throw new Error(`${key} 값이 숫자가 아닙니다.`);
+  }
+
+  return value;
+}
+
+
+function readEditorFurniture() {
+  return [
+    ...document.querySelectorAll(
+      '.furniture-editor-row'
+    )
+  ].map(row => ({
+    id: row.querySelector('[data-key="id"]').value.trim(),
+    name: row.querySelector('[data-key="name"]').value.trim() || '가구',
+    rect: {
+      x: readEditorItemNumber(row, 'x'),
+      y: readEditorItemNumber(row, 'y'),
+      width: readEditorItemNumber(row, 'width'),
+      height: readEditorItemNumber(row, 'height')
+    },
+    movable: row.querySelector('[data-key="movable"]').checked,
+    height_cm: readEditorItemNumber(row, 'height_cm'),
+    blocks_view: row.querySelector('[data-key="blocks_view"]').checked,
+    sharp_edge: row.querySelector('[data-key="sharp_edge"]').checked
+  }));
+}
+
+
+function readEditorDoors() {
+  return [
+    ...document.querySelectorAll(
+      '.door-editor-row'
+    )
+  ].map(row => ({
+    id: row.querySelector('[data-key="id"]').value.trim(),
+    name: row.querySelector('[data-key="name"]').value.trim() || '출입문',
+    rect: {
+      x: readEditorItemNumber(row, 'x'),
+      y: readEditorItemNumber(row, 'y'),
+      width: readEditorItemNumber(row, 'width'),
+      height: readEditorItemNumber(row, 'height')
+    },
+    is_emergency_exit:
+      row.querySelector(
+        '[data-key="is_emergency_exit"]'
+      ).checked
+  }));
+}
+
+
+function buildEditorRoomLayout() {
+  const id =
+    document.getElementById('editorRoomId')
+      .value.trim();
+
+  const name =
+    document.getElementById('editorRoomName')
+      .value.trim();
+
+  if (!id) {
+    throw new Error('교실 ID를 입력해주세요.');
+  }
+
+  if (!name) {
+    throw new Error('교실 이름을 입력해주세요.');
+  }
+
+  const width = editorNumber('editorWidth');
+  const height = editorNumber('editorHeight');
+  const minPassage =
+    editorNumber('editorMinPassage');
+  const exitClearance =
+    editorNumber('editorExitClearance');
+
+  if (
+    width <= 0 ||
+    height <= 0 ||
+    minPassage <= 0 ||
+    exitClearance <= 0
+  ) {
+    throw new Error('크기와 기준값은 0보다 커야 합니다.');
+  }
+
+  return {
+    id,
+    name,
+    width_cm: width,
+    height_cm: height,
+    furniture: readEditorFurniture(),
+    doors: readEditorDoors(),
+    teacher_positions:
+      editorPoint(
+        'editorTeacherX',
+        'editorTeacherY'
+      ),
+    observation_points:
+      editorPoint(
+        'editorObservationX',
+        'editorObservationY'
+      ),
+    min_passage_cm: minPassage,
+    exit_clearance_cm: exitClearance
+  };
+}
+
+
+function setEditorStatus(message, isError = false) {
+  const el =
+    document.getElementById('editorStatus');
+
+  el.textContent = message;
+  el.classList.toggle(
+    'error-text',
+    isError
+  );
+}
+
+
+function showEditorPreview(layout) {
+  document.getElementById(
+    'editorPreview'
+  ).textContent =
+    JSON.stringify(
+      layout,
+      null,
+      2
+    );
+}
+
+
+function setEditorPoint(xId, yId, points) {
+  const point =
+    points && points.length
+      ? points[0]
+      : null;
+
+  document.getElementById(xId).value =
+    point ? point.x : '';
+
+  document.getElementById(yId).value =
+    point ? point.y : '';
+}
+
+
+function loadEditorFromRoom(target) {
+  if (!target) {
+    setEditorStatus(
+      '불러올 현재 배치가 없습니다.',
+      true
+    );
+    return;
+  }
+
+  document.getElementById(
+    'editorRoomId'
+  ).value = target.id;
+
+  document.getElementById(
+    'editorRoomName'
+  ).value = target.name;
+
+  document.getElementById(
+    'editorWidth'
+  ).value = target.width_cm;
+
+  document.getElementById(
+    'editorHeight'
+  ).value = target.height_cm;
+
+  document.getElementById(
+    'editorMinPassage'
+  ).value = target.min_passage_cm || 80;
+
+  document.getElementById(
+    'editorExitClearance'
+  ).value = target.exit_clearance_cm || 100;
+
+  setEditorPoint(
+    'editorTeacherX',
+    'editorTeacherY',
+    target.teacher_positions
+  );
+
+  setEditorPoint(
+    'editorObservationX',
+    'editorObservationY',
+    target.observation_points
+  );
+
+  const furnitureList =
+    document.getElementById(
+      'editorFurnitureList'
+    );
+
+  const doorList =
+    document.getElementById(
+      'editorDoorList'
+    );
+
+  furnitureList.innerHTML = '';
+  doorList.innerHTML = '';
+
+  for (const item of target.furniture || []) {
+    createEditorFurnitureRow(item);
+  }
+
+  for (const item of target.doors || []) {
+    createEditorDoorRow(item);
+  }
+
+  showEditorPreview(target);
+  setEditorStatus(
+    `${target.name} 불러오기 완료`
+  );
+}
+
+
+async function previewEditorLayout() {
+  try {
+    const layout =
+      buildEditorRoomLayout();
+
+    showEditorPreview(layout);
+    setEditorStatus(
+      'JSON 미리보기 생성'
+    );
+  } catch (error) {
+    console.error(error);
+    setEditorStatus(
+      error.message,
+      true
+    );
+  }
+}
+
+
+async function applyEditorLayout() {
+  const button =
+    document.getElementById(
+      'editorApplyBtn'
+    );
+
+  button.disabled = true;
+  button.textContent = '검증·분석 중...';
+
+  try {
+    const layout =
+      buildEditorRoomLayout();
+
+    await validateRoomLayout(layout);
+
+    currentRoom = layout;
+    proposedRoom = null;
+
+    showEditorPreview(layout);
+
+    await refreshComparison();
+    await selectLayout('current');
+    await analyzeNestSystem();
+
+    setImportStatus(
+      '현장 입력 RoomLayout 사용 중'
+    );
+
+    setEditorStatus(
+      '현재 배치 적용·분석 완료'
+    );
+  } catch (error) {
+    console.error(error);
+
+    setEditorStatus(
+      `검증 실패: ${error.message}`,
+      true
+    );
+  } finally {
+    button.disabled = false;
+    button.textContent =
+      '현재 배치로 적용·분석';
+  }
+}
+
+
+async function exportEditorLayout() {
+  try {
+    const layout =
+      buildEditorRoomLayout();
+
+    await validateRoomLayout(layout);
+    showEditorPreview(layout);
+
+    const blob =
+      new Blob(
+        [
+          JSON.stringify(
+            layout,
+            null,
+            2
+          )
+        ],
+        {
+          type: 'application/json'
+        }
+      );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement('a');
+
+    link.href = url;
+    link.download =
+      `${layout.id}.json`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+
+    setEditorStatus(
+      `${layout.id}.json 저장 완료`
+    );
+  } catch (error) {
+    console.error(error);
+
+    setEditorStatus(
+      `저장 실패: ${error.message}`,
+      true
+    );
+  }
+}
+
 function setImportStatus(message, isError = false) {
   const el = document.getElementById('importStatus');
   el.textContent = message;
@@ -868,6 +1378,46 @@ async function load() {
   await analyzeNestSystem();
   startLiveDevicePolling();
 }
+
+
+document
+  .getElementById('editorAddFurnitureBtn')
+  .addEventListener('click', () => {
+    createEditorFurnitureRow();
+  });
+
+document
+  .getElementById('editorAddDoorBtn')
+  .addEventListener('click', () => {
+    createEditorDoorRow();
+  });
+
+document
+  .getElementById('editorLoadCurrentBtn')
+  .addEventListener('click', () => {
+    loadEditorFromRoom(
+      room || currentRoom
+    );
+  });
+
+document
+  .getElementById('editorPreviewBtn')
+  .addEventListener('click', async () => {
+    await previewEditorLayout();
+  });
+
+document
+  .getElementById('editorApplyBtn')
+  .addEventListener('click', async () => {
+    await applyEditorLayout();
+  });
+
+document
+  .getElementById('editorExportBtn')
+  .addEventListener('click', async () => {
+    await exportEditorLayout();
+  });
+
 
 document
   .getElementById('loadFieldDemoBtn')

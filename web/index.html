@@ -41,6 +41,123 @@
       </div>
     </section>
 
+
+    <section class="card room-editor">
+      <div class="card-head">
+        <div>
+          <span class="tag">FIELD ROOM EDITOR</span>
+          <h2>현장 교실 RoomLayout 입력</h2>
+        </div>
+        <span id="editorStatus" class="muted">입력 대기</span>
+      </div>
+
+      <p class="room-editor-copy">
+        10/13 현장에서 교실 크기, 가구, 출입문, 교사 위치와 관찰지점을 입력해
+        <code>RoomLayout</code> JSON을 만들고 바로 NEST 분석에 적용합니다.
+      </p>
+
+      <div class="editor-grid">
+        <label class="editor-field">
+          <span>교실 ID</span>
+          <input id="editorRoomId" value="field-room-01" />
+        </label>
+
+        <label class="editor-field">
+          <span>교실 이름</span>
+          <input id="editorRoomName" value="현장 교실" />
+        </label>
+
+        <label class="editor-field">
+          <span>가로(cm)</span>
+          <input id="editorWidth" type="number" min="1" value="800" />
+        </label>
+
+        <label class="editor-field">
+          <span>세로(cm)</span>
+          <input id="editorHeight" type="number" min="1" value="600" />
+        </label>
+
+        <label class="editor-field">
+          <span>통로 데모 기준(cm)</span>
+          <input id="editorMinPassage" type="number" min="1" value="80" />
+        </label>
+
+        <label class="editor-field">
+          <span>출입문 확보영역(cm)</span>
+          <input id="editorExitClearance" type="number" min="1" value="100" />
+        </label>
+      </div>
+
+      <div class="editor-point-grid">
+        <fieldset class="editor-point-card">
+          <legend>교사 주 위치</legend>
+          <label>
+            X
+            <input id="editorTeacherX" type="number" min="0" placeholder="예: 100" />
+          </label>
+          <label>
+            Y
+            <input id="editorTeacherY" type="number" min="0" placeholder="예: 300" />
+          </label>
+        </fieldset>
+
+        <fieldset class="editor-point-card">
+          <legend>관찰지점</legend>
+          <label>
+            X
+            <input id="editorObservationX" type="number" min="0" placeholder="예: 430" />
+          </label>
+          <label>
+            Y
+            <input id="editorObservationY" type="number" min="0" placeholder="예: 300" />
+          </label>
+        </fieldset>
+      </div>
+
+      <div class="editor-list-section">
+        <div class="editor-list-head">
+          <div>
+            <strong>가구</strong>
+            <small>가구별 위치·크기·시야차단·모서리 위험 속성</small>
+          </div>
+          <button id="editorAddFurnitureBtn" class="secondary" type="button">
+            + 가구 추가
+          </button>
+        </div>
+        <div id="editorFurnitureList" class="editor-list"></div>
+      </div>
+
+      <div class="editor-list-section">
+        <div class="editor-list-head">
+          <div>
+            <strong>출입문</strong>
+            <small>대피동선 확보영역 분석에 사용</small>
+          </div>
+          <button id="editorAddDoorBtn" class="secondary" type="button">
+            + 출입문 추가
+          </button>
+        </div>
+        <div id="editorDoorList" class="editor-list"></div>
+      </div>
+
+      <div class="editor-actions">
+        <button id="editorLoadCurrentBtn" class="secondary" type="button">
+          현재 화면값 불러오기
+        </button>
+        <button id="editorPreviewBtn" class="secondary" type="button">
+          JSON 미리보기
+        </button>
+        <button id="editorExportBtn" class="secondary" type="button">
+          JSON 저장
+        </button>
+        <button id="editorApplyBtn" type="button">
+          현재 배치로 적용·분석
+        </button>
+      </div>
+
+      <pre id="editorPreview" class="editor-preview">입력값으로 RoomLayout JSON을 생성합니다.</pre>
+    </section>
+
     <section class="card field-demo-panel">
       <div class="field-demo-copy">
         <span class="tag">FIELD VALIDATION DEMO</span>
