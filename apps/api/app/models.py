@@ -155,9 +155,50 @@ class PhysicalAnalysisResult(BaseModel):
 
 
 
+class AlertPreferences(BaseModel):
+    """
+    현장 피드백을 반영한 NEST 알림 설정.
+
+    기본값은 상시 경고음이 아니라
+    Critical Zone에서만 경고음을 사용하는 정책이다.
+    """
+
+    buzzer_enabled: bool = True
+
+    buzzer_mode: Literal[
+        "off",
+        "critical_only",
+        "high_and_critical",
+    ] = "critical_only"
+
+    # 데모용 융합 반경.
+    # 공식 안전기준이 아니며 현장 검증 후 조정한다.
+    critical_zone_radius_cm: float = Field(
+        default=120,
+        gt=0,
+    )
+
+
+class CriticalZone(BaseModel):
+    id: str
+    level: Literal["critical"] = "critical"
+    title: str
+    explanation: str
+
+    blind_spot_risk_id: str
+    collision_risk_id: str
+
+    distance_cm: float
+    location: Point
+
+
 class SystemAnalyzeRequest(BaseModel):
     layout: RoomLayout
     sensors: PhysicalSensorInput
+
+    alerts: AlertPreferences = Field(
+        default_factory=AlertPreferences
+    )
 
 
 class SystemFeatureStatus(BaseModel):
@@ -169,20 +210,35 @@ class SystemFeatureStatus(BaseModel):
         "low_light",
         "wet_floor",
     ]
+
     label: str
     active: bool
     severity: Optional[Severity] = None
-    sources: list[Literal["spatial", "sensor"]] = Field(default_factory=list)
-    related_risk_ids: list[str] = Field(default_factory=list)
+
+    sources: list[
+        Literal["spatial", "sensor"]
+    ] = Field(default_factory=list)
+
+    related_risk_ids: list[str] = Field(
+        default_factory=list
+    )
 
 
 class SystemAnalysisResult(BaseModel):
     room_id: str
+
     features: list[SystemFeatureStatus]
     active_features: int
+
+    # 현장 검증 이후 추가된 핵심 융합 결과
+    critical_zones: list[CriticalZone]
+
     spatial: AnalysisResult
     physical: PhysicalAnalysisResult
+
     device: DeviceCommand
+    alert_policy: AlertPreferences
+
     disclaimer: str = (
         "NEST 통합 결과는 공간분석과 시제품 센서값을 결합한 "
         "위험 후보 참고정보입니다. 공식 안전검사 또는 교사의 "
