@@ -2,6 +2,7 @@ let currentRoom = null;
 let proposedRoom = null;
 let room = null;
 let risks = [];
+let criticalZones = [];
 let movedFurnitureIds = new Set();
 
 const canvas = document.getElementById('roomCanvas');
@@ -191,6 +192,45 @@ function drawRoom() {
     ctx.fillText('!', p.x, p.y + 6);
     ctx.textAlign = 'start';
   }
+
+  // Field validation CORE:
+  // blind spot × collision Critical Zone
+  for (const zone of criticalZones) {
+    const p = zone.location;
+
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.arc(
+      p.x,
+      p.y,
+      42,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fillStyle = 'rgba(192,57,43,.12)';
+    ctx.fill();
+
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 6;
+    ctx.setLineDash([10, 7]);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#c0392b';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+
+    ctx.fillText(
+      'CRITICAL',
+      p.x,
+      p.y - 50
+    );
+
+    ctx.restore();
+  }
 }
 
 function renderResult(result) {
@@ -367,6 +407,88 @@ async function importLayout(kind, file) {
 }
 
 
+function featurePriority(key) {
+  if (
+    key === 'blind_spot' ||
+    key === 'collision'
+  ) {
+    return {
+      label: 'CORE',
+      className: 'core'
+    };
+  }
+
+  if (
+    key === 'passage' ||
+    key === 'evacuation'
+  ) {
+    return {
+      label: 'SUPPORT',
+      className: 'support'
+    };
+  }
+
+  return {
+    label: 'EXPERIMENTAL',
+    className: 'experimental'
+  };
+}
+
+
+function renderCriticalZones(result) {
+  criticalZones =
+    result.critical_zones || [];
+
+  const count =
+    document.getElementById(
+      'criticalZoneCount'
+    );
+
+  count.textContent =
+    `${criticalZones.length} ZONE`;
+
+  const panel =
+    document.getElementById(
+      'criticalZonePanel'
+    );
+
+  if (criticalZones.length === 0) {
+    panel.innerHTML = `
+      <p class="muted">
+        시야 사각과 충돌 위험이 결합된
+        Critical Zone이 없습니다.
+      </p>
+    `;
+
+    drawRoom();
+    return;
+  }
+
+  panel.innerHTML =
+    criticalZones.map(zone => `
+      <article class="critical-zone-card">
+        <div class="critical-zone-card-head">
+          <strong>
+            ${zone.title}
+          </strong>
+          <span>CRITICAL</span>
+        </div>
+
+        <p>
+          ${zone.explanation}
+        </p>
+
+        <small>
+          위험 후보 간 거리
+          ${zone.distance_cm}cm
+        </small>
+      </article>
+    `).join('');
+
+  drawRoom();
+}
+
+
 function severityText(severity) {
   if (severity === 'high') return 'HIGH';
   if (severity === 'medium') return 'MEDIUM';
@@ -412,14 +534,26 @@ function renderSystemResult(result) {
     result.device.lcd_line2;
 
   document.getElementById('systemFeatures').innerHTML =
-    result.features.map(feature => `
+    result.features.map(feature => {
+      const priority =
+        featurePriority(feature.key);
+
+      return `
       <article
         class="feature-card
           ${feature.active ? 'active' : 'safe'}
           ${feature.severity || ''}"
       >
         <div class="feature-card-head">
-          <strong>${feature.label}</strong>
+          <div>
+            <span
+              class="priority-badge ${priority.className}"
+            >
+              ${priority.label}
+            </span>
+            <strong>${feature.label}</strong>
+          </div>
+
           <span>
             ${feature.active
               ? severityText(feature.severity)
@@ -437,7 +571,10 @@ function renderSystemResult(result) {
             : '현재 위험 후보 없음'}
         </small>
       </article>
-    `).join('');
+      `;
+    }).join('');
+
+  renderCriticalZones(result);
 }
 
 async function analyzeNestSystem() {
@@ -471,6 +608,18 @@ async function analyzeNestSystem() {
         document
           .getElementById('wetDetected')
           .checked
+    },
+
+    alerts: {
+      buzzer_enabled:
+        document
+          .getElementById('buzzerEnabled')
+          .checked,
+
+      buzzer_mode:
+        document
+          .getElementById('buzzerMode')
+          .value
     }
   };
 
@@ -523,12 +672,14 @@ document
   .getElementById('currentBtn')
   .addEventListener('click', async () => {
     await selectLayout('current');
+    await analyzeNestSystem();
   });
 
 document
   .getElementById('proposedBtn')
   .addEventListener('click', async () => {
     await selectLayout('proposed');
+    await analyzeNestSystem();
   });
 
 document
@@ -536,6 +687,7 @@ document
   .addEventListener('click', async () => {
     if (room) {
       await analyzeRoom(room);
+      await analyzeNestSystem();
     }
   });
 
@@ -551,6 +703,19 @@ document
   .addEventListener('change', async event => {
     await importLayout('proposed', event.target.files?.[0]);
     event.target.value = '';
+  });
+
+
+document
+  .getElementById('buzzerEnabled')
+  .addEventListener('change', async () => {
+    await analyzeNestSystem();
+  });
+
+document
+  .getElementById('buzzerMode')
+  .addEventListener('change', async () => {
+    await analyzeNestSystem();
   });
 
 load().catch(err => {
