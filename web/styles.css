@@ -1,6 +1,7 @@
 :root { font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#17202a; background:#f5f7fb; }
 * { box-sizing:border-box; }
 body { margin:0; }
+.back-dashboard { position:fixed; top:16px; right:18px; z-index:20; padding:10px 14px; border-radius:999px; background:#0d2b56; color:#fff; font-size:13px; font-weight:800; text-decoration:none; box-shadow:0 10px 28px rgba(13,43,86,.22); }
 .shell { max-width:1400px; margin:0 auto; padding:36px 24px 72px; }
 header h1 { margin:6px 0 0; font-size:48px; letter-spacing:-2px; }
 .eyebrow { font-size:12px; font-weight:800; letter-spacing:.12em; color:#5d6d7e; }
@@ -611,6 +612,158 @@ button.secondary.active { background:#17202a; color:#fff; }
   background:#e7f7ee;
 }
 
+.live-badge.delayed {
+  color:#9a6700;
+  background:#fff2ce;
+}
+
+.live-sensor-dashboard {
+  display:grid;
+  grid-template-columns:minmax(190px,.8fr) minmax(260px,1.15fr) minmax(300px,1.35fr);
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.sensor-reading-card,
+.sensor-meta-card,
+.sensor-event-card {
+  border:1px solid #dce5ef;
+  border-radius:14px;
+  background:#fff;
+  padding:13px 14px;
+}
+
+.sensor-reading-card {
+  display:grid;
+  align-content:center;
+  background:linear-gradient(135deg,#eef7ff,#fff);
+}
+
+.sensor-card-label,
+.sensor-meta-card span {
+  color:#748596;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.06em;
+}
+
+.sensor-reading-card > strong {
+  margin:5px 0 7px;
+  color:#123f72;
+  font-size:30px;
+  line-height:1;
+}
+
+.measurement-status {
+  width:max-content;
+  display:inline-flex;
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:9px;
+  font-weight:900;
+}
+
+.measurement-status.ok {
+  color:#177245;
+  background:#e7f7ee;
+}
+
+.measurement-status.out_of_range {
+  color:#9a6700;
+  background:#fff1cc;
+}
+
+.measurement-status.unavailable,
+.measurement-status.waiting {
+  color:#667784;
+  background:#edf1f4;
+}
+
+.sensor-meta-card {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.sensor-meta-card strong,
+.sensor-meta-card span {
+  display:block;
+}
+
+.sensor-meta-card strong {
+  margin-top:4px;
+  color:#263f58;
+  font-size:11px;
+}
+
+.sensor-meta-card p {
+  grid-column:1 / -1;
+  margin:0;
+  padding-top:8px;
+  border-top:1px solid #edf1f4;
+  color:#65717d;
+  font-size:9px;
+  line-height:1.45;
+}
+
+.sensor-event-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:7px;
+  color:#314d67;
+  font-size:11px;
+}
+
+.sensor-event-head small {
+  color:#8a949e;
+  font-size:8px;
+}
+
+.sensor-event-list {
+  display:grid;
+  gap:5px;
+  max-height:76px;
+  overflow:auto;
+}
+
+.sensor-event-list .muted {
+  margin:8px 0 0;
+  font-size:9px;
+}
+
+.sensor-event-row {
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:8px;
+  align-items:center;
+  padding:5px 7px;
+  border-radius:8px;
+  background:#f7f9fb;
+  font-size:9px;
+}
+
+.sensor-event-row time {
+  color:#8492a0;
+}
+
+.sensor-event-row span {
+  color:#586d80;
+}
+
+.sensor-event-row strong {
+  color:#24445f;
+}
+
+.sensor-event-row.range {
+  background:#fff8e6;
+}
+
+.sensor-event-row.offline {
+  background:#fff0ef;
+}
+
 .live-device-grid {
   display:grid;
   grid-template-columns:repeat(6,1fr);
@@ -654,12 +807,28 @@ button.secondary.active { background:#17202a; color:#fff; }
 }
 
 @media(max-width:1050px) {
+  .live-sensor-dashboard {
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .sensor-event-card {
+    grid-column:1 / -1;
+  }
+
   .live-device-grid {
     grid-template-columns:repeat(3,1fr);
   }
 }
 
 @media(max-width:620px) {
+  .live-sensor-dashboard {
+    grid-template-columns:1fr;
+  }
+
+  .sensor-event-card {
+    grid-column:auto;
+  }
+
   .live-device-grid {
     grid-template-columns:repeat(2,1fr);
   }

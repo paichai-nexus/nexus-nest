@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,10 +19,19 @@ from .models import (
     SystemAnalyzeRequest,
     LiveDeviceState,
     LiveDeviceUpdate,
+    CallCreateRequest,
+    CallTransitionRequest,
+    StaffCallSnapshot,
 )
 from .device_state import (
     get_live_device,
     update_live_device,
+)
+from .call_state import (
+    CallStateError,
+    create_call,
+    get_calls,
+    transition_call,
 )
 from .physical_engine import analyze_physical
 from .risk_engine import analyze
@@ -151,9 +160,51 @@ def update_device_state(
     return update_live_device(update)
 
 
+@app.get(
+    "/api/v1/calls",
+    response_model=StaffCallSnapshot,
+)
+def list_staff_calls() -> StaffCallSnapshot:
+    return get_calls()
+
+
+@app.post(
+    "/api/v1/calls",
+    response_model=StaffCallSnapshot,
+    status_code=201,
+)
+def request_staff_call(
+    payload: CallCreateRequest,
+) -> StaffCallSnapshot:
+    try:
+        return create_call(payload)
+    except CallStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.post(
+    "/api/v1/calls/{call_id}/transition",
+    response_model=StaffCallSnapshot,
+)
+def update_staff_call(
+    call_id: str,
+    payload: CallTransitionRequest,
+) -> StaffCallSnapshot:
+    try:
+        return transition_call(call_id, payload)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="호출을 찾을 수 없습니다.") from exc
+    except CallStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 if WEB_DIR.exists():
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
     @app.get("/")
     def index() -> FileResponse:
+        return FileResponse(WEB_DIR / "dashboard-v2.html")
+
+    @app.get("/analysis")
+    def analysis_page() -> FileResponse:
         return FileResponse(WEB_DIR / "index.html")

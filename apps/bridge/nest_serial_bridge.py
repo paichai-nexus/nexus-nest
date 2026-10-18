@@ -11,6 +11,7 @@ Python 3.9 compatible.
 
 import argparse
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -20,8 +21,17 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-DEFAULT_API_BASE = "http://127.0.0.1:8000"
-DEFAULT_BAUD = 115200
+DEFAULT_API_BASE = os.getenv(
+    "NEST_API_BASE",
+    "http://127.0.0.1:8000",
+)
+DEFAULT_SERIAL_PORT = os.getenv(
+    "NEST_SERIAL_PORT",
+    "/dev/cu.usbserial-10",
+)
+DEFAULT_BAUD = int(
+    os.getenv("NEST_SERIAL_BAUD", "9600")
+)
 DEFAULT_TIMEOUT = 5.0
 DEFAULT_RETRIES = 3
 DEFAULT_RETRY_DELAY = 0.4
@@ -123,6 +133,86 @@ def normalize_sensor_snapshot(
     }
 
 
+def parse_serial_frame(line: str) -> Dict[str, Any]:
+    """Parse both the existing JSON protocol and UNO text output.
+
+    DISTANCE frames are measurement events only. They are intentionally
+    kept separate from the NEST risk-analysis request because an HC-SR04
+    distance change is not, by itself, an assessed child-safety risk.
+    """
+    stripped = line.strip()
+
+    if not stripped:
+        raise BridgeProtocolError("empty sensor line")
+
+    if stripped == "NEXUS NEST SENSOR READY":
+        return {
+            "type": "ready",
+            "measurement_status": "unavailable",
+            "sensor": None,
+        }
+
+    if stripped.startswith("DISTANCE:"):
+        value = stripped.split(":", 1)[1].strip()
+
+        if value == "OUT_OF_RANGE":
+            return {
+                "type": "distance",
+                "measurement_status": "out_of_range",
+                "sensor": {
+                    "passage_cm": None,
+                    "passage_min_cm": 80.0,
+                    "low_light_detected": False,
+                    "wet_detected": False,
+                },
+            }
+
+        try:
+            distance = float(value)
+        except ValueError as exc:
+            raise BridgeProtocolError(
+                "DISTANCE value must be numeric or OUT_OF_RANGE"
+            ) from exc
+
+        if distance < 0:
+            raise BridgeProtocolError(
+                "DISTANCE value must be >= 0"
+            )
+
+        return {
+            "type": "distance",
+            "measurement_status": "ok",
+            "sensor": {
+                "passage_cm": distance,
+                "passage_min_cm": 80.0,
+                "low_light_detected": False,
+                "wet_detected": False,
+            },
+        }
+
+    try:
+        raw_sensor = json.loads(stripped)
+    except json.JSONDecodeError as exc:
+        raise BridgeProtocolError(
+            "unsupported serial frame"
+        ) from exc
+
+    if not isinstance(raw_sensor, dict):
+        raise BridgeProtocolError(
+            "sensor JSON must be an object"
+        )
+
+    return {
+        "type": "json",
+        "measurement_status": (
+            "ok"
+            if raw_sensor.get("passage_cm") is not None
+            else "unavailable"
+        ),
+        "sensor": raw_sensor,
+    }
+
+
 def build_system_payload(
     layout: Dict[str, Any],
     sensors: Dict[str, Any],
@@ -179,12 +269,24 @@ def build_live_update(
     arduino_connected: bool,
     layout: Dict[str, Any],
     raw_sensor: Dict[str, Any],
-    packet: Dict[str, Any],
+    packet: Optional[Dict[str, Any]],
+    measurement_status: Optional[str] = None,
 ) -> Dict[str, Any]:
     sensor = normalize_sensor_snapshot(
         raw_sensor,
         room_id=layout["id"],
     )
+
+    device = None
+
+    if packet is not None:
+        device = {
+            "overall": packet["overall"],
+            "led_color": packet["led_color"],
+            "buzzer": packet["buzzer"],
+            "lcd_line1": packet["lcd_line1"],
+            "lcd_line2": packet["lcd_line2"],
+        }
 
     return {
         "transport": transport,
@@ -193,14 +295,33 @@ def build_live_update(
         "arduino_connected": arduino_connected,
         "room_id": layout["id"],
         "sensor": sensor,
-        "device": {
-            "overall": packet["overall"],
-            "led_color": packet["led_color"],
-            "buzzer": packet["buzzer"],
-            "lcd_line1": packet["lcd_line1"],
-            "lcd_line2": packet["lcd_line2"],
-        },
+        "device": device,
+        "measurement_status": (
+            measurement_status
+            or (
+                "ok"
+                if sensor["passage_cm"] is not None
+                else "unavailable"
+            )
+        ),
         "error": None,
+    }
+
+
+def build_bridge_status_update(
+    connected: bool,
+    error: Optional[str] = None,
+) -> Dict[str, Any]:
+    return {
+        "transport": "serial",
+        "simulated": False,
+        "bridge_connected": True,
+        "arduino_connected": connected,
+        "room_id": None,
+        "sensor": None,
+        "device": None,
+        "measurement_status": "unavailable",
+        "error": error,
     }
 
 
@@ -532,6 +653,13 @@ def run_serial(args: argparse.Namespace) -> int:
                     baud=args.baud,
                 )
 
+                publish_live_update(
+                    api_base=args.api,
+                    update=build_bridge_status_update(
+                        connected=True,
+                    ),
+                )
+
                 while True:
                     raw_line = ser.readline()
 
@@ -544,6 +672,59 @@ def run_serial(args: argparse.Namespace) -> int:
                         ).strip()
 
                         if not line:
+                            continue
+
+                        frame = parse_serial_frame(line)
+
+                        if frame["type"] == "ready":
+                            log_event(
+                                "arduino_ready",
+                                port=args.port,
+                            )
+                            publish_live_update(
+                                api_base=args.api,
+                                update=build_bridge_status_update(
+                                    connected=True,
+                                ),
+                            )
+                            continue
+
+                        if frame["type"] == "distance":
+                            raw_sensor = frame["sensor"]
+                            update = build_live_update(
+                                transport="serial",
+                                simulated=False,
+                                arduino_connected=True,
+                                layout=layout,
+                                raw_sensor=raw_sensor,
+                                packet=None,
+                                measurement_status=frame[
+                                    "measurement_status"
+                                ],
+                            )
+
+                            publish_live_update(
+                                api_base=args.api,
+                                update=update,
+                            )
+
+                            print(
+                                json.dumps(
+                                    {
+                                        "type": "sensor_event",
+                                        "source": "hc_sr04",
+                                        "measurement_status": frame[
+                                            "measurement_status"
+                                        ],
+                                        "distance_cm": raw_sensor[
+                                            "passage_cm"
+                                        ],
+                                    },
+                                    ensure_ascii=False,
+                                    separators=(",", ":"),
+                                ),
+                                flush=True,
+                            )
                             continue
 
                         packet = process_sensor_line(
@@ -602,12 +783,33 @@ def run_serial(args: argparse.Namespace) -> int:
                 error=str(exc),
             )
 
+            publish_live_update(
+                api_base=args.api,
+                update=build_bridge_status_update(
+                    connected=False,
+                    error=str(exc),
+                ),
+            )
+
             if args.no_reconnect:
                 return 3
 
             time.sleep(
                 args.reconnect_seconds
             )
+
+        except KeyboardInterrupt:
+            publish_live_update(
+                api_base=args.api,
+                update={
+                    **build_bridge_status_update(
+                        connected=False,
+                    ),
+                    "bridge_connected": False,
+                },
+            )
+            log_event("bridge_stopped")
+            return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -689,7 +891,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--port",
-        default=None,
+        default=DEFAULT_SERIAL_PORT,
+        help=(
+            "Serial port (default: NEST_SERIAL_PORT or "
+            "/dev/cu.usbserial-10)"
+        ),
     )
 
     parser.add_argument(

@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NEXUS NEST · Classroom Safety MVP</title>
-  <link rel="stylesheet" href="/static/styles.css" />
+  <title>NEXUS NEST · 공간안전 분석</title>
+  <link rel="stylesheet" href="/static/styles.css?v=uno-live-1" />
 </head>
 <body>
+  <a class="back-dashboard" href="/">← 원장실 통합 관제로 돌아가기</a>
   <main class="shell">
     <header>
       <p class="eyebrow">PAICHAI NEXUS · SMART ICT MAKERTHON 2026</p>
@@ -242,11 +243,46 @@
         <div class="live-device-head">
           <div>
             <span class="tag">LIVE DEVICE</span>
-            <h3>Bridge · Arduino 상태</h3>
+            <h3>실시간 센서 · Arduino 상태</h3>
           </div>
           <span id="liveDeviceBadge" class="live-badge offline">
             OFFLINE
           </span>
+        </div>
+
+        <div class="live-sensor-dashboard">
+          <article class="sensor-reading-card">
+            <span class="sensor-card-label">HC-SR04 거리 측정</span>
+            <strong id="liveSensorValue">--</strong>
+            <span id="liveMeasurementStatus" class="measurement-status waiting">
+              데이터 대기
+            </span>
+          </article>
+
+          <article class="sensor-meta-card">
+            <div>
+              <span>데이터 구분</span>
+              <strong id="liveDataSource">연결 대기</strong>
+            </div>
+            <div>
+              <span>마지막 수신 시각</span>
+              <strong id="liveReceivedAt">-</strong>
+            </div>
+            <p>
+              거리 변화는 별도 센서 이벤트로 표시하며,
+              어린이 안전 위험을 직접 판정하지 않습니다.
+            </p>
+          </article>
+
+          <article class="sensor-event-card">
+            <div class="sensor-event-head">
+              <strong>최근 센서 이벤트</strong>
+              <small>브라우저 세션</small>
+            </div>
+            <div id="sensorEventList" class="sensor-event-list">
+              <p class="muted">수신된 센서 이벤트가 없습니다.</p>
+            </div>
+          </article>
         </div>
 
         <div class="live-device-grid">
@@ -404,6 +440,6 @@ POST /api/v1/analyze
 POST /api/v1/compare</pre>
     </section>
   </main>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=uno-live-1"></script>
 </body>
 </html>

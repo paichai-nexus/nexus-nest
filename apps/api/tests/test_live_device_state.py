@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from fastapi.testclient import TestClient
 
+from app import device_state
 from app.device_state import reset_live_device_state
 from app.main import app
 
@@ -46,6 +49,7 @@ def test_live_device_update_round_trip():
             "lcd_line1": "NEST CRITICAL",
             "lcd_line2": "ZONES: 1",
         },
+        "measurement_status": "ok",
         "error": None,
     }
 
@@ -69,6 +73,65 @@ def test_live_device_update_round_trip():
 
     assert data["room_id"] == "nest-field-critical"
     assert data["sensor"]["passage_cm"] == 100
+    assert data["measurement_status"] == "ok"
     assert data["device"]["buzzer"] is True
     assert data["received_at"] is not None
     assert data["age_seconds"] is not None
+
+
+def test_live_device_marks_interrupted_stream_as_stale(monkeypatch):
+    payload = {
+        "transport": "serial",
+        "simulated": False,
+        "bridge_connected": True,
+        "arduino_connected": True,
+        "measurement_status": "ok",
+        "sensor": {
+            "room_id": "nest-field-critical",
+            "passage_cm": 11.2,
+            "passage_min_cm": 80,
+            "low_light_detected": False,
+            "wet_detected": False,
+        },
+    }
+
+    posted = client.post("/api/v1/device/live", json=payload)
+    received_at = device_state._now()
+    monkeypatch.setattr(
+        device_state,
+        "_now",
+        lambda: received_at
+        + timedelta(seconds=device_state.STALE_AFTER_SECONDS + 0.1),
+    )
+
+    data = client.get("/api/v1/device/live").json()
+
+    assert posted.status_code == 200
+    assert data["stale"] is True
+    assert data["age_seconds"] > device_state.STALE_AFTER_SECONDS
+
+
+def test_live_device_accepts_out_of_range_measurement():
+    payload = {
+        "transport": "serial",
+        "simulated": False,
+        "bridge_connected": True,
+        "arduino_connected": True,
+        "measurement_status": "out_of_range",
+        "sensor": {
+            "room_id": "nest-field-critical",
+            "passage_cm": None,
+            "passage_min_cm": 80,
+            "low_light_detected": False,
+            "wet_detected": False,
+        },
+    }
+
+    posted = client.post("/api/v1/device/live", json=payload)
+
+    assert posted.status_code == 200
+    data = posted.json()
+    assert data["simulated"] is False
+    assert data["measurement_status"] == "out_of_range"
+    assert data["sensor"]["passage_cm"] is None
+    assert data["device"] is None

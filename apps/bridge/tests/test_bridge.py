@@ -20,6 +20,41 @@ bridge = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bridge)
 
 
+def test_parse_uno_ready_frame():
+    assert bridge.parse_serial_frame(
+        "NEXUS NEST SENSOR READY"
+    ) == {
+        "type": "ready",
+        "measurement_status": "unavailable",
+        "sensor": None,
+    }
+
+
+def test_parse_uno_distance_frame():
+    result = bridge.parse_serial_frame(
+        "DISTANCE:11.2"
+    )
+
+    assert result["type"] == "distance"
+    assert result["measurement_status"] == "ok"
+    assert result["sensor"]["passage_cm"] == 11.2
+
+
+def test_parse_uno_out_of_range_frame():
+    result = bridge.parse_serial_frame(
+        "DISTANCE:OUT_OF_RANGE"
+    )
+
+    assert result["type"] == "distance"
+    assert result["measurement_status"] == "out_of_range"
+    assert result["sensor"]["passage_cm"] is None
+
+
+def test_parse_uno_bad_distance_is_rejected():
+    with pytest.raises(bridge.BridgeProtocolError):
+        bridge.parse_serial_frame("DISTANCE:unknown")
+
+
 def test_normalize_sensor_snapshot():
     raw = {
         "passage_cm": "32.4",
@@ -235,3 +270,29 @@ def test_build_live_update():
     assert update["arduino_connected"] is False
     assert update["sensor"]["room_id"] == "room-01"
     assert update["device"]["buzzer"] is True
+    assert update["measurement_status"] == "ok"
+
+
+def test_build_measurement_only_live_update():
+    update = bridge.build_live_update(
+        transport="serial",
+        simulated=False,
+        arduino_connected=True,
+        layout={"id": "room-01"},
+        raw_sensor={
+            "passage_cm": None,
+            "low_light_detected": False,
+            "wet_detected": False,
+        },
+        packet=None,
+        measurement_status="out_of_range",
+    )
+
+    assert update["sensor"]["passage_cm"] is None
+    assert update["device"] is None
+    assert update["measurement_status"] == "out_of_range"
+
+
+def test_default_hardware_settings_match_verified_uno():
+    assert bridge.DEFAULT_SERIAL_PORT == "/dev/cu.usbserial-10"
+    assert bridge.DEFAULT_BAUD == 9600

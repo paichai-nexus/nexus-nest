@@ -1,0 +1,238 @@
+.map-viewport {
+  background: radial-gradient(circle at 50% 48%, #fff 0, #eef6fb 62%, #e5eff7 100%);
+}
+
+.map-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  aspect-ratio: 16 / 9;
+  transform: translate(-50%, -50%) scale(var(--map-zoom));
+  transform-origin: center;
+  transition: transform 0.25s ease;
+  filter: drop-shadow(0 18px 25px rgba(31, 74, 111, 0.12));
+}
+
+.isometric-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.route-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.route-layer path {
+  fill: none;
+  stroke: rgba(27, 119, 220, 0.42);
+  stroke-width: 0.38;
+  stroke-dasharray: 1.25 1.25;
+  stroke-linecap: round;
+}
+
+.map-stage.hide-paths .route-layer,
+.map-stage.hide-sensors .sensor-pin,
+.map-stage.hide-markers .room-markers {
+  display: none;
+}
+
+.room-markers {
+  position: absolute;
+  inset: 0;
+}
+
+.map-marker {
+  min-width: 124px;
+  padding: 7px 9px;
+  gap: 7px;
+  transform: translate(-50%, -50%) scale(calc(1 / var(--map-zoom)));
+  transform-origin: center;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+}
+
+.map-marker:hover,
+.map-marker:focus-visible,
+.map-marker.selected {
+  outline: none;
+  box-shadow: 0 11px 28px rgba(18, 74, 128, 0.28);
+  transform: translate(-50%, -50%) scale(calc(1.045 / var(--map-zoom)));
+}
+
+.map-marker > i {
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  font-size: 10px;
+}
+
+.map-marker strong,
+.map-marker b,
+.map-marker small {
+  white-space: nowrap;
+}
+
+.map-marker strong { font-size: 9px; }
+.map-marker b { font-size: 8px; }
+.map-marker small { font-size: 7px; }
+
+.map-marker.requested {
+  border-color: #ff5962;
+  box-shadow: 0 10px 28px rgba(255, 77, 85, 0.34);
+  animation: call-attention 1.8s ease-in-out infinite;
+}
+
+.map-marker.active {
+  box-shadow: 0 10px 28px rgba(52, 121, 238, 0.27);
+}
+
+.map-marker.offline {
+  border-color: #a9b9c9;
+}
+
+.map-marker.offline > i {
+  background: #8ba0b5;
+}
+
+.sensor-pin {
+  position: absolute;
+  left: 29%;
+  top: 35%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border: 1px solid rgba(15, 186, 126, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 14px rgba(18, 85, 65, 0.14);
+  transform: translate(-50%, -50%) scale(calc(1 / var(--map-zoom)));
+  transform-origin: center;
+  color: #197357;
+  font-size: 6px;
+  font-weight: 900;
+}
+
+.sensor-pin i {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--green);
+  font-style: normal;
+}
+
+.sensor-pin span,
+.sensor-pin small {
+  display: block;
+  white-space: nowrap;
+}
+
+.sensor-pin small {
+  color: #679783;
+  font-size: 5px;
+}
+
+.selected-info p {
+  margin-top: 4px;
+}
+
+.selected-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.selected-actions button {
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--blue);
+  font-size: 8px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.selected-actions button.secondary {
+  border: 1px solid #cfe0ef;
+  color: #35638f;
+  background: #f4f8fc;
+}
+
+.selected-room > button {
+  display: none;
+}
+
+.university-brand {
+  gap: 0;
+  padding: 0 18px;
+}
+
+.university-logo {
+  display: block;
+  width: 100%;
+  max-width: 185px;
+  height: auto;
+  object-fit: contain;
+}
+
+.classroom-thumb {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.05), rgba(18,55,90,.12)), url('/static/assets/kindergarten-isometric-demo.png');
+  background-size: cover;
+  background-position: center;
+}
+
+.room-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.room-detail-grid span {
+  padding: 10px;
+  border-radius: 8px;
+  color: #7a93ad;
+  background: #f4f8fc;
+  font-size: 8px;
+}
+
+.room-detail-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: #1d416b;
+  font-size: 10px;
+}
+
+@keyframes call-attention {
+  0%, 100% { box-shadow: 0 10px 26px rgba(255, 77, 85, 0.25); }
+  50% { box-shadow: 0 12px 34px rgba(255, 77, 85, 0.5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-stage,
+  .map-marker { transition: none; }
+  .map-marker.requested { animation: none; }
+}
+
+@media (max-width: 1450px) {
+  .university-logo { max-width: 166px; }
+  .map-marker { min-width: 108px; padding: 6px 8px; }
+  .map-marker > i { width: 25px; height: 25px; flex-basis: 25px; }
+}
+
+@media (max-width: 1180px) {
+  .university-brand { padding: 0 8px; }
+  .university-logo { max-width: 62px; }
+}

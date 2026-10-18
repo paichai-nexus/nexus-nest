@@ -1169,6 +1169,84 @@ function renderSystemResult(result) {
 
 
 let liveDeviceTimer = null;
+let lastLiveReceivedAt = null;
+const sensorEvents = [];
+
+function formatLiveTime(value) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return new Intl.DateTimeFormat(
+    'ko-KR',
+    {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Seoul'
+    }
+  ).format(date);
+}
+
+function renderSensorEvents() {
+  const list = document.getElementById(
+    'sensorEventList'
+  );
+
+  list.innerHTML = sensorEvents.length
+    ? sensorEvents.map(event => `
+      <div class="sensor-event-row ${event.kind}">
+        <time>${event.time}</time>
+        <span>${event.label}</span>
+        <strong>${event.value}</strong>
+      </div>
+    `).join('')
+    : '<p class="muted">수신된 센서 이벤트가 없습니다.</p>';
+}
+
+function recordSensorEvent(state) {
+  if (
+    !state?.received_at ||
+    state.received_at === lastLiveReceivedAt
+  ) {
+    return;
+  }
+
+  lastLiveReceivedAt = state.received_at;
+
+  const passage = state.sensor?.passage_cm;
+  const status = state.measurement_status;
+  let label = state.simulated
+    ? '가상 센서'
+    : '실측 센서';
+  let value = '연결 상태 갱신';
+  let kind = 'status';
+
+  if (status === 'out_of_range') {
+    value = '측정 범위 밖';
+    kind = 'range';
+  } else if (passage != null) {
+    value = `${Number(passage).toFixed(1)} cm`;
+    kind = 'measurement';
+  } else if (state.error) {
+    label = '장치 연결';
+    value = '연결 끊김';
+    kind = 'offline';
+  }
+
+  sensorEvents.unshift({
+    time: formatLiveTime(state.received_at),
+    label,
+    value,
+    kind
+  });
+
+  sensorEvents.splice(6);
+  renderSensorEvents();
+}
 
 function renderLiveDevice(state) {
   const badge =
@@ -1182,17 +1260,21 @@ function renderLiveDevice(state) {
     state.bridge_connected;
 
   const mode =
-    !isFresh
-      ? 'offline'
+    state?.bridge_connected && state.stale
+      ? 'delayed'
+      : !isFresh
+        ? 'offline'
       : state.simulated
         ? 'simulated'
         : 'live';
 
   badge.textContent =
     mode === 'live'
-      ? 'LIVE'
+      ? '실측 연결'
       : mode === 'simulated'
         ? 'SIMULATED'
+        : mode === 'delayed'
+          ? 'DATA DELAYED'
         : 'OFFLINE';
 
   badge.className =
@@ -1201,13 +1283,17 @@ function renderLiveDevice(state) {
   document.getElementById(
     'liveBridge'
   ).textContent =
-    isFresh ? 'CONNECTED' : 'OFFLINE';
+    state?.bridge_connected
+      ? 'CONNECTED'
+      : 'OFFLINE';
 
   document.getElementById(
     'liveArduino'
   ).textContent =
-    isFresh && state.arduino_connected
-      ? 'CONNECTED'
+    state?.arduino_connected
+      ? state.stale
+        ? 'DATA DELAYED'
+        : 'CONNECTED'
       : 'NOT CONNECTED';
 
   document.getElementById(
@@ -1225,6 +1311,52 @@ function renderLiveDevice(state) {
 
   const passage =
     state.sensor?.passage_cm;
+
+  const measurementStatus =
+    state.measurement_status ||
+    (passage == null ? 'unavailable' : 'ok');
+
+  const sensorValue =
+    document.getElementById('liveSensorValue');
+
+  const statusValue =
+    document.getElementById(
+      'liveMeasurementStatus'
+    );
+
+  sensorValue.textContent =
+    measurementStatus === 'out_of_range'
+      ? '--'
+      : passage == null
+        ? '--'
+        : `${Number(passage).toFixed(1)} cm`;
+
+  statusValue.textContent =
+    measurementStatus === 'out_of_range'
+      ? '측정 범위 밖'
+      : measurementStatus === 'ok'
+        ? '정상 수신'
+        : '데이터 대기';
+
+  statusValue.className =
+    `measurement-status ${measurementStatus}`;
+
+  document.getElementById(
+    'liveDataSource'
+  ).textContent =
+    state.simulated
+      ? 'SIMULATED · Virtual Arduino'
+      : isFresh && state.transport === 'serial'
+        ? 'REAL · Arduino UNO'
+        : mode === 'delayed'
+          ? 'REAL · 데이터 지연'
+          : '연결 대기';
+
+  document.getElementById(
+    'liveReceivedAt'
+  ).textContent = formatLiveTime(
+    state.received_at
+  );
 
   document.getElementById(
     'livePassage'
@@ -1250,7 +1382,10 @@ function renderLiveDevice(state) {
       'liveDeviceNote'
     );
 
-  if (!isFresh) {
+  if (mode === 'delayed') {
+    note.textContent =
+      'Bridge 연결 기록은 있으나 최근 센서 데이터가 지연되고 있습니다.';
+  } else if (!isFresh) {
     note.textContent =
       '최근 3초 이내 장치 데이터가 없습니다.';
   } else if (state.simulated) {
@@ -1260,6 +1395,8 @@ function renderLiveDevice(state) {
     note.textContent =
       '실제 Serial Bridge에서 수신한 최근 장치 상태입니다.';
   }
+
+  recordSensorEvent(state);
 }
 
 
@@ -1280,8 +1417,11 @@ async function refreshLiveDevice() {
       simulated: false,
       transport: 'none',
       age_seconds: null,
+      received_at: null,
+      measurement_status: 'unavailable',
       sensor: null,
-      device: null
+      device: null,
+      error: null
     });
   }
 }
