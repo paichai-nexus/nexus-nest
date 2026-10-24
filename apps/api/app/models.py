@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import Literal, Optional, Union
 from pydantic import BaseModel, Field
@@ -244,3 +245,80 @@ class SystemAnalysisResult(BaseModel):
         "위험 후보 참고정보입니다. 공식 안전검사 또는 교사의 "
         "전문적 판단을 대체하지 않습니다."
     )
+
+class LiveDeviceUpdate(BaseModel):
+    transport: Literal[
+        "none",
+        "serial",
+        "stdio",
+        "mock",
+    ] = "none"
+
+    simulated: bool = False
+    bridge_connected: bool = False
+    arduino_connected: bool = False
+
+    room_id: Optional[str] = None
+    sensor: Optional[PhysicalSensorInput] = None
+    device: Optional[DeviceCommand] = None
+    measurement_status: Optional[
+        Literal[
+            "ok",
+            "out_of_range",
+            "unavailable",
+        ]
+    ] = None
+    error: Optional[str] = None
+
+
+class LiveDeviceState(LiveDeviceUpdate):
+    received_at: Optional[str] = None
+    stale: bool = True
+    age_seconds: Optional[float] = None
+
+
+class CallStatus(str, Enum):
+    REQUESTED = "requested"
+    ACCEPTED = "accepted"
+    RESPONDING = "responding"
+    COMPLETED = "completed"
+
+
+class CallCreateRequest(BaseModel):
+    room_id: str = Field(min_length=1, max_length=80)
+    room_name: str = Field(min_length=1, max_length=80)
+    requester: Optional[str] = Field(default=None, max_length=80)
+
+
+class CallTransitionRequest(BaseModel):
+    action: Literal["accept", "respond", "complete"]
+    actor: Optional[str] = Field(default=None, max_length=80)
+
+
+class StaffCall(BaseModel):
+    id: str
+    room_id: str
+    room_name: str
+    requester: Optional[str] = None
+    status: CallStatus
+    accepted_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: Optional[datetime] = None
+
+
+class StaffCallEvent(BaseModel):
+    id: str
+    call_id: str
+    room_id: str
+    room_name: str
+    type: Literal["requested", "accepted", "responding", "completed"]
+    actor: Optional[str] = None
+    created_at: datetime
+
+
+class StaffCallSnapshot(BaseModel):
+    calls: list[StaffCall]
+    events: list[StaffCallEvent]
+    summary: dict[str, int]
+    demo_mode: bool = False

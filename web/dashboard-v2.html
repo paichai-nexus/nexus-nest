@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEXUS NEST · 원장실 통합 관제</title>
+  <link rel="stylesheet" href="/static/dashboard-v2.css?v=isometric-1" />
+  <link rel="stylesheet" href="/static/dashboard-isometric.css?v=competition-final-1" />
+</head>
+<body>
+  <div class="app-frame">
+    <aside class="sidebar">
+      <div class="university-brand">
+        <img class="university-logo" src="/static/assets/paichai-university-logo.png?v=1" alt="배재대학교 PAI CHAI UNIVERSITY" />
+      </div>
+      <nav class="side-nav" aria-label="주 메뉴">
+        <a class="nav-item active" href="/"><b>⌂</b><span>통합 대시보드</span></a>
+        <button class="nav-item" type="button" data-scroll="eventPanel"><b>♢</b><span>호출 현황</span><em id="sideCallCount" hidden>0</em></button>
+        <button class="nav-item pending" type="button" data-pending="다중 교실 관리 화면은 준비 중입니다."><b>▣</b><span>교실 관리</span><small>준비 중</small></button>
+        <button class="nav-item pending" type="button" data-pending="소리 센서가 연결되지 않았습니다."><b>≋</b><span>소리 이벤트</span><small>미연결</small></button>
+        <button class="nav-item" type="button" data-scroll="devicePanel"><b>▤</b><span>장치 상태</span></button>
+        <button class="nav-item pending" type="button" data-pending="온습도·조도 센서가 연결되지 않았습니다."><b>▦</b><span>환경 모니터링</span><small>미연결</small></button>
+        <a class="nav-item" href="/analysis"><b>⌖</b><span>공간안전 분석</span></a>
+        <button class="nav-item pending" type="button" data-pending="통계 API 연동 전입니다."><b>▥</b><span>통계 및 리포트</span><small>준비 중</small></button>
+        <button class="nav-item pending" type="button" data-pending="설정 화면은 준비 중입니다."><b>⚙</b><span>설정</span><small>준비 중</small></button>
+      </nav>
+      <div class="sidebar-note"><span>LOCAL FIELD PILOT</span><p>실제 연결 데이터와 미구현 기능을 구분해 표시합니다.</p></div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="product-title"><h1>NEXUS NEST</h1><p>유치원 교직원 간 무음 호출 · 안전 이벤트 통합 관제 시스템</p></div>
+        <div class="top-statuses">
+          <div class="top-status"><i id="serverDot" class="dot pending"></i><span><strong id="serverLabel">서버 확인 중</strong><small>FastAPI</small></span></div>
+          <div class="top-status"><i id="arduinoTopDot" class="dot pending"></i><span><strong id="arduinoTopLabel">Arduino 확인 중</strong><small id="arduinoTopSub">USB Serial</small></span></div>
+          <div class="date-time"><span id="currentDate">-</span><strong id="currentTime">--:--</strong></div>
+          <div class="profile"><b>●</b><span><strong>원장실</strong><small>관리자 화면</small></span></div>
+        </div>
+      </header>
+
+      <div class="dashboard">
+        <section class="kpi-grid" aria-label="운영 현황 요약">
+          <article class="kpi-card call"><span class="kpi-icon">!</span><div><b>긴급·진행 중 호출</b><strong><span id="activeCallCount">0</span><small>건</small></strong><p id="activeCallText">현재 진행 중 없음</p></div></article>
+          <article class="kpi-card waiting"><span class="kpi-icon">○</span><div><b>대기 중 호출</b><strong><span id="waitingCallCount">0</span><small>건</small></strong><p id="waitingCallText">수락 대기 없음</p></div></article>
+          <article class="kpi-card responding"><span class="kpi-icon">↗</span><div><b>대응 중 호출</b><strong><span id="respondingCallCount">0</span><small>건</small></strong><p id="respondingCallText">현재 대응 없음</p></div></article>
+          <article class="kpi-card completed"><span class="kpi-icon">✓</span><div><b>완료된 호출</b><strong><span id="completedCallCount">0</span><small>건</small></strong><p>서버 세션 누적</p></div></article>
+        </section>
+
+        <section class="workspace">
+          <article class="map-card card">
+            <div class="map-head">
+              <div><h2>교실 3D 관제 지도</h2><p id="mapSubtitle">배재대학교 부속어린이집 · CAD·현장 사진 기반 근사 모델</p></div>
+              <div class="map-actions"><span class="mode-switch floor-switch" aria-label="층 선택"><button class="active" type="button" data-floor="1">1F</button><button type="button" data-floor="2">2F</button><button type="button" data-floor="0">전체</button></span><button id="overviewButton" class="reset-view-button" type="button">시점 초기화</button><button id="fullscreenButton" class="icon-button" type="button" aria-label="지도 전체 화면">⛶</button></div>
+            </div>
+            <div id="mapViewport" class="map-viewport">
+              <div id="mapStage" class="map-stage building-stage">
+                <canvas id="buildingCanvas" aria-label="배재대학교 부속어린이집 CAD 기반 인터랙티브 3D 근사 모델"></canvas>
+                <div id="roomMarkers" class="room-markers building-labels" aria-label="교실 상태 마커"></div>
+                <div id="webglFallback" class="webgl-fallback" hidden>이 브라우저에서는 3D 지도를 표시할 수 없습니다.</div>
+              </div>
+              <div class="demo-chip"><b id="floorLabel">1층</b> · CAD·현장 사진 기반 근사 모델 · 실측 치수 모델 아님</div>
+              <div class="map-help">드래그 회전 · 휠 확대/축소 · 교실 클릭</div>
+              <aside class="map-tools">
+                <div class="tool-card"><strong>교실 상태</strong><span><i class="green"></i>정상</span><span><i class="red"></i>호출 요청</span><span><i class="amber"></i>대응 중</span><span><i class="gray"></i>오프라인</span><label class="marker-toggle"><input type="checkbox" checked data-layer="markers">마커 표시</label></div>
+              </aside>
+              <div class="zoom-control"><button id="zoomIn" type="button">+</button><button id="zoomOut" type="button">−</button></div>
+            </div>
+          </article>
+
+          <aside id="eventPanel" class="event-card card">
+            <div class="section-head"><h2>실시간 호출·이벤트</h2><span id="eventCount">0</span></div>
+            <div class="event-call-focus" id="recentCallKpi">
+              <div class="recent-title"><b>최근 호출</b><time id="recentCallElapsed">-</time></div>
+              <div id="recentCallEmpty" class="recent-empty"><strong>진행 중 호출 없음</strong><span>필요하면 웹 호출을 시작하세요.</span></div>
+              <div id="recentCallSummary" class="recent-summary" hidden><i>!</i><span><strong id="recentCallRoom">-</strong><b id="recentCallStatus">-</b></span></div>
+              <button id="openCallDialog" type="button">웹 호출 요청</button>
+            </div>
+            <div class="event-filters" role="group" aria-label="이벤트 필터"><button class="active" data-filter="all">전체</button><button data-filter="call">호출</button><button data-filter="sensor">센서</button><button data-filter="device">장치</button><button data-filter="environment">환경</button></div>
+            <div id="eventList" class="event-list"><div class="empty-event"><b>이벤트 대기 중</b><span>실제 수신 이벤트만 표시합니다.</span></div></div>
+          </aside>
+        </section>
+
+        <section class="bottom-grid">
+          <article class="bottom-card card selected-room">
+            <div class="section-head"><h2>현재 선택된 교실</h2></div>
+            <div class="selected-body"><div class="classroom-thumb"><span>CAD 3D · 근사</span></div><div class="selected-info"><h3 id="selectedRoomName">HM101</h3><b id="selectedCallState" class="call-state idle">정상</b><p>최근 호출: <span id="selectedRecentCall">없음</span></p><p>호출 시각: <span id="selectedCallTime">-</span></p><p>지원: <span id="supportTeacher">미배정</span></p><p>장치: <span id="selectedDeviceState">설치 위치 미등록</span></p></div></div>
+            <div class="selected-actions"><button id="roomDetailButton" class="secondary" type="button">교실 상세 보기</button><button id="selectedRoomAction" type="button">웹 호출 요청</button></div>
+          </article>
+
+          <article class="bottom-card card sensor-card">
+            <div class="section-head"><h2>센서 상태 <em>(Arduino UNO)</em></h2><span id="sensorSource">-</span></div>
+            <div class="sensor-main"><div class="sensor-symbol">◉</div><div><span>HC-SR04</span><strong id="distanceValue">--</strong><b id="distanceStatus">데이터 대기</b></div><small id="sensorRealBadge">-</small></div>
+            <div class="unverified-sensors"><span>온도 <b>미연결</b></span><span>습도 <b>미연결</b></span><span>조도 <b>미연결</b></span></div>
+            <div class="trend-title"><b>최근 거리 측정값</b><small>단위: cm</small></div><canvas id="distanceTrend" width="360" height="52" aria-label="최근 거리 측정 추세"></canvas>
+          </article>
+
+          <article id="devicePanel" class="bottom-card card devices-card">
+            <div class="section-head"><h2>교실 장치 상태</h2><span>실측 / 미검증</span></div>
+            <div class="device-grid">
+              <div><i id="arduinoDot" class="dot pending"></i><span><strong>Arduino UNO</strong><small id="arduinoState">확인 중</small></span></div>
+              <div><i id="sensorDot" class="dot pending"></i><span><strong>HC-SR04</strong><small id="deviceDistance">데이터 대기</small></span></div>
+              <div><i class="dot off"></i><span><strong>네오픽셀</strong><small>미연결 · 미검증</small></span></div>
+              <div><i class="dot off"></i><span><strong>LCD</strong><small>미연결 · 미검증</small></span></div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="callDialog" class="call-dialog">
+    <form method="dialog" class="dialog-shell">
+      <button class="dialog-close" value="cancel" aria-label="닫기">×</button>
+      <span class="dialog-kicker">WEB STAFF CALL</span><h2>교직원 무음 도움 요청</h2>
+      <p>물리 호출 버튼과 동일한 서버 흐름을 사용하는 웹 인터페이스입니다.</p>
+      <div id="callCreateView">
+        <label>교실<input id="callRoomName" readonly></label>
+        <label>요청자 <input id="callRequester" maxlength="80" placeholder="선택 입력"></label>
+        <button id="createCallButton" class="dialog-primary" type="button">도움 요청 보내기</button>
+      </div>
+      <div id="callActionView" hidden>
+        <div class="dialog-status"><span>현재 상태</span><strong id="dialogCallStatus">-</strong></div>
+        <label>처리 담당자 <input id="callActor" maxlength="80" placeholder="선택 입력"></label>
+        <button id="transitionCallButton" class="dialog-primary" type="button">호출 수락</button>
+      </div>
+      <small id="callDialogError" class="dialog-error"></small>
+    </form>
+  </dialog>
+  <dialog id="roomDialog" class="call-dialog room-dialog">
+    <form method="dialog" class="dialog-shell">
+      <button class="dialog-close" value="cancel" aria-label="닫기">×</button>
+      <span class="dialog-kicker">CLASSROOM STATUS</span><h2 id="detailRoomName">HM101</h2>
+      <p>선택한 CAD 기반 근사 교실의 호출 및 장치 상태입니다.</p>
+      <div class="room-detail-grid">
+        <span>호출 상태<strong id="detailCallState">정상</strong></span>
+        <span>최근 호출<strong id="detailRecentCall">없음</strong></span>
+        <span>호출 시각<strong id="detailCallTime">-</strong></span>
+        <span>지원 교사<strong id="detailSupportTeacher">미배정</strong></span>
+        <span>장치 상태<strong id="detailDeviceState">미등록</strong></span>
+        <span>지도 유형<strong>CAD·사진 기반 Three.js 근사</strong></span>
+      </div>
+      <button id="detailCallAction" class="dialog-primary" type="button">웹 호출 요청</button>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/static/dashboard-isometric.js?v=competition-final-1"></script>
+</body>
+</html>

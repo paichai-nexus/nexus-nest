@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEXUS NEST · 원장실 통합 관제</title>
+  <link rel="stylesheet" href="/static/dashboard.css?v=ops-1" />
+</head>
+<body>
+  <div class="ops-app">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">N</div>
+        <div class="brand-copy">
+          <span>PAICHAI UNIVERSITY</span>
+          <strong>NEXUS NEST</strong>
+        </div>
+      </div>
+
+      <nav class="side-nav" aria-label="주 메뉴">
+        <a class="nav-item active" href="/" aria-current="page">
+          <span class="nav-icon">⌂</span><span>통합 대시보드</span>
+        </a>
+        <button class="nav-item pending" type="button" data-pending="호출 API 연동 전입니다.">
+          <span class="nav-icon">♢</span><span>호출 현황</span><small>준비 중</small>
+        </button>
+        <button class="nav-item pending" type="button" data-pending="다중 교실 API 연동 전입니다.">
+          <span class="nav-icon">▣</span><span>교실 관리</span><small>준비 중</small>
+        </button>
+        <button class="nav-item pending" type="button" data-pending="사운드 센서가 연결되지 않았습니다.">
+          <span class="nav-icon">≋</span><span>소리 이벤트</span><small>미연결</small>
+        </button>
+        <a class="nav-item" href="#deviceCard">
+          <span class="nav-icon">▤</span><span>장치 상태</span>
+        </a>
+        <a class="nav-item" href="/analysis">
+          <span class="nav-icon">⌖</span><span>공간안전 분석</span>
+        </a>
+        <button class="nav-item pending" type="button" data-pending="통계 API 연동 전입니다.">
+          <span class="nav-icon">▥</span><span>통계 및 리포트</span><small>준비 중</small>
+        </button>
+        <button class="nav-item pending" type="button" data-pending="설정 화면은 준비 중입니다.">
+          <span class="nav-icon">⚙</span><span>설정</span><small>준비 중</small>
+        </button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <span class="heart">◆</span>
+        <strong>NEXUS NEST</strong>
+        <p>아이들의 안전과 교직원의 대응을 한눈에 확인합니다.</p>
+        <span class="build-label">FIELD PILOT · LOCAL</span>
+      </div>
+    </aside>
+
+    <main class="main-shell">
+      <header class="topbar">
+        <div class="page-title">
+          <span class="mobile-brand">NEXUS NEST</span>
+          <h1>원장실 통합 관제</h1>
+          <p>어린이집 교직원 간 무음 호출 · 안전 이벤트 통합 관제 시스템</p>
+        </div>
+        <div class="topbar-meta">
+          <div class="system-health">
+            <span id="serverDot" class="status-dot waiting"></span>
+            <span><b id="serverLabel">서버 확인 중</b><small id="deviceHeaderState">장치 확인 중</small></span>
+          </div>
+          <div class="clock-block">
+            <span id="currentDate">-</span>
+            <strong id="currentTime">--:--</strong>
+          </div>
+          <div class="admin-block">
+            <span class="admin-avatar">A</span>
+            <span><strong>원장실</strong><small>관리자 화면</small></span>
+          </div>
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+        <section class="kpi-grid" aria-label="운영 현황 요약">
+          <article class="kpi-card red">
+            <span class="kpi-icon">!</span>
+            <div><span>진행 중인 호출</span><strong>0<small>건</small></strong><p>호출 API 미연결</p></div>
+          </article>
+          <article class="kpi-card blue">
+            <span class="kpi-icon">…</span>
+            <div><span>대기 중인 호출</span><strong>0<small>건</small></strong><p>호출 API 미연결</p></div>
+          </article>
+          <article class="kpi-card green">
+            <span class="kpi-icon">✓</span>
+            <div><span>완료된 호출</span><strong>0<small>건</small></strong><p>운영 데이터 없음</p></div>
+          </article>
+          <article class="kpi-card purple">
+            <span class="kpi-icon">≋</span>
+            <div><span>소리 이벤트</span><strong>0<small>건</small></strong><p>사운드 센서 미연결</p></div>
+          </article>
+        </section>
+
+        <section class="control-grid">
+          <article class="map-panel panel">
+            <div class="panel-head map-head">
+              <div>
+                <span class="section-kicker">LIVE CLASSROOM MAP</span>
+                <h2>교실 배치도</h2>
+                <p id="mapRoomName">RoomLayout 불러오는 중</p>
+              </div>
+              <div class="map-controls">
+                <div class="segmented" aria-label="지도 모드">
+                  <button class="active" type="button">2D</button>
+                  <button type="button" disabled title="실제 3D 모델 준비 후 제공">3D <small>준비 중</small></button>
+                </div>
+                <div class="segmented floor-tabs" aria-label="층 선택">
+                  <button class="active" type="button">1F</button>
+                  <button type="button" disabled>2F</button>
+                </div>
+                <a class="analysis-button" href="/analysis">공간안전 분석 ↗</a>
+              </div>
+            </div>
+
+            <div class="map-stage" id="mapStage">
+              <canvas id="floorCanvas" width="1200" height="650" aria-label="RoomLayout 기반 교실 평면도"></canvas>
+              <button id="roomMarker" class="room-marker offline" type="button" aria-label="교실 상세 정보 열기">
+                <span class="marker-pulse"></span>
+                <strong id="markerTitle">현장 교실</strong>
+                <small id="markerStatus">상태 확인 중</small>
+              </button>
+              <div class="map-badge"><span>ROOMLAYOUT</span> 실제 API 데이터</div>
+              <div class="zoom-controls">
+                <button id="zoomIn" type="button" aria-label="지도 확대">+</button>
+                <button id="zoomOut" type="button" aria-label="지도 축소">−</button>
+              </div>
+              <aside id="roomDetail" class="room-detail" aria-live="polite">
+                <button id="detailClose" class="detail-close" type="button" aria-label="상세 닫기">×</button>
+                <span class="section-kicker">ROOM DETAIL</span>
+                <h3 id="detailRoomName">현장 교실</h3>
+                <dl>
+                  <div><dt>장치 상태</dt><dd id="detailDevice">확인 중</dd></div>
+                  <div><dt>센서 데이터</dt><dd id="detailSource">-</dd></div>
+                  <div><dt>HC-SR04</dt><dd id="detailDistance">-</dd></div>
+                  <div><dt>마지막 수신</dt><dd id="detailReceived">-</dd></div>
+                  <div><dt>공간 위험 후보</dt><dd id="detailRiskCount">-</dd></div>
+                </dl>
+                <p>거리값은 별도 센서 측정이며 어린이 안전 위험을 직접 판정하지 않습니다.</p>
+              </aside>
+            </div>
+
+            <div class="map-legend">
+              <span><i class="normal"></i> 정상 연결</span>
+              <span><i class="response"></i> 대응 중</span>
+              <span><i class="call"></i> 호출</span>
+              <span><i class="offline"></i> 오프라인</span>
+              <span class="legend-note">3D는 실제 모델 확보 후 활성화됩니다.</span>
+            </div>
+          </article>
+
+          <aside class="events-panel panel">
+            <div class="panel-head events-head">
+              <div><span class="section-kicker">REAL-TIME FEED</span><h2>실시간 이벤트</h2></div>
+              <span id="eventCount" class="count-badge">0</span>
+            </div>
+            <div class="event-filters" role="group" aria-label="이벤트 필터">
+              <button class="active" type="button" data-filter="all">전체</button>
+              <button type="button" data-filter="call">호출</button>
+              <button type="button" data-filter="device">장치</button>
+              <button type="button" data-filter="sensor">센서</button>
+            </div>
+            <div id="eventList" class="event-list">
+              <div class="empty-state"><span>◎</span><strong>이벤트 대기 중</strong><p>실제 장치 이벤트만 표시합니다.</p></div>
+            </div>
+            <div class="event-source-note"><span class="live-pip"></span> 브라우저 세션 · 최신순</div>
+          </aside>
+        </section>
+
+        <section class="bottom-grid">
+          <article class="mini-panel panel">
+            <div class="mini-head"><h3>교실별 상태</h3><span>1개 RoomLayout</span></div>
+            <div class="classroom-row">
+              <span id="classroomDot" class="room-dot offline"></span>
+              <div><strong id="classroomName">현장 교실</strong><small id="classroomSub">상태 확인 중</small></div>
+              <b id="classroomBadge" class="state-pill offline">오프라인</b>
+            </div>
+          </article>
+
+          <article class="mini-panel panel">
+            <div class="mini-head"><h3>최근 호출 현황</h3><span>실데이터</span></div>
+            <div class="data-unavailable"><span>♢</span><div><strong>호출 데이터 없음</strong><small>호출 API 연동 전</small></div></div>
+          </article>
+
+          <article class="mini-panel panel">
+            <div class="mini-head"><h3>소리 이벤트 현황</h3><span>실데이터</span></div>
+            <div class="data-unavailable purple"><span>≋</span><div><strong>센서 미연결</strong><small>소리 감지·AI 분류 미구현</small></div></div>
+          </article>
+
+          <article id="deviceCard" class="mini-panel panel device-card">
+            <div class="mini-head"><h3>하드웨어 연결 상태</h3><span id="hardwareCount">0 / 2</span></div>
+            <div class="hardware-grid">
+              <div><span id="arduinoDot" class="device-dot offline"></span><b>Arduino UNO</b><small id="arduinoState">오프라인</small></div>
+              <div><span id="sensorDot" class="device-dot offline"></span><b>HC-SR04</b><small id="distanceState">데이터 없음</small></div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/static/dashboard.js?v=ops-1"></script>
+</body>
+</html>

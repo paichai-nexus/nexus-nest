@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NEXUS NEST · Classroom Safety MVP</title>
-  <link rel="stylesheet" href="/static/styles.css" />
+  <title>NEXUS NEST · 공간안전 분석</title>
+  <link rel="stylesheet" href="/static/styles.css?v=uno-live-1" />
 </head>
 <body>
+  <a class="back-dashboard" href="/">← 원장실 통합 관제로 돌아가기</a>
   <main class="shell">
     <header>
       <p class="eyebrow">PAICHAI NEXUS · SMART ICT MAKERTHON 2026</p>
@@ -38,6 +39,133 @@
           개선 배치 JSON
           <input id="proposedFile" type="file" accept=".json,application/json" />
         </label>
+      </div>
+    </section>
+
+
+    <section class="card room-editor">
+      <div class="card-head">
+        <div>
+          <span class="tag">FIELD ROOM EDITOR</span>
+          <h2>현장 교실 RoomLayout 입력</h2>
+        </div>
+        <div class="editor-head-actions">
+          <span id="editorStatus" class="muted">입력 대기</span>
+          <button id="editorToggleBtn"
+                  class="secondary"
+                  type="button"
+                  aria-expanded="false">
+            현장 입력 펼치기
+          </button>
+        </div>
+      </div>
+
+      <div id="editorBody" class="room-editor-body collapsed">
+      <p class="room-editor-copy">
+        10/13 현장에서 교실 크기, 가구, 출입문, 교사 위치와 관찰지점을 입력해
+        <code>RoomLayout</code> JSON을 만들고 바로 NEST 분석에 적용합니다.
+      </p>
+
+      <div class="editor-grid">
+        <label class="editor-field">
+          <span>교실 ID</span>
+          <input id="editorRoomId" value="field-room-01" />
+        </label>
+
+        <label class="editor-field">
+          <span>교실 이름</span>
+          <input id="editorRoomName" value="현장 교실" />
+        </label>
+
+        <label class="editor-field">
+          <span>가로(cm)</span>
+          <input id="editorWidth" type="number" min="1" value="800" />
+        </label>
+
+        <label class="editor-field">
+          <span>세로(cm)</span>
+          <input id="editorHeight" type="number" min="1" value="600" />
+        </label>
+
+        <label class="editor-field">
+          <span>시제품 임시 통로 기준값(cm)</span>
+          <input id="editorMinPassage" type="number" min="1" value="80" />
+        </label>
+
+        <label class="editor-field">
+          <span>시제품 임시 출입문 확보값(cm)</span>
+          <input id="editorExitClearance" type="number" min="1" value="100" />
+        </label>
+      </div>
+
+      <div class="editor-point-grid">
+        <fieldset class="editor-point-card">
+          <legend>교사 주 위치</legend>
+          <label>
+            X
+            <input id="editorTeacherX" type="number" min="0" placeholder="예: 100" />
+          </label>
+          <label>
+            Y
+            <input id="editorTeacherY" type="number" min="0" placeholder="예: 300" />
+          </label>
+        </fieldset>
+
+        <fieldset class="editor-point-card">
+          <legend>관찰지점</legend>
+          <label>
+            X
+            <input id="editorObservationX" type="number" min="0" placeholder="예: 430" />
+          </label>
+          <label>
+            Y
+            <input id="editorObservationY" type="number" min="0" placeholder="예: 300" />
+          </label>
+        </fieldset>
+      </div>
+
+      <div class="editor-list-section">
+        <div class="editor-list-head">
+          <div>
+            <strong>가구</strong>
+            <small>가구별 위치·크기·시야차단·모서리 위험 속성</small>
+          </div>
+          <button id="editorAddFurnitureBtn" class="secondary" type="button">
+            + 가구 추가
+          </button>
+        </div>
+        <div id="editorFurnitureList" class="editor-list"></div>
+      </div>
+
+      <div class="editor-list-section">
+        <div class="editor-list-head">
+          <div>
+            <strong>출입문</strong>
+            <small>대피동선 확보영역 분석에 사용</small>
+          </div>
+          <button id="editorAddDoorBtn" class="secondary" type="button">
+            + 출입문 추가
+          </button>
+        </div>
+        <div id="editorDoorList" class="editor-list"></div>
+      </div>
+
+      <div class="editor-actions">
+        <button id="editorLoadCurrentBtn" class="secondary" type="button">
+          현재 화면값 불러오기
+        </button>
+        <button id="editorPreviewBtn" class="secondary" type="button">
+          JSON 미리보기
+        </button>
+        <button id="editorExportBtn" class="secondary" type="button">
+          JSON 저장
+        </button>
+        <button id="editorApplyBtn" type="button">
+          현재 배치로 적용·분석
+        </button>
+      </div>
+
+      <pre id="editorPreview" class="editor-preview">입력값으로 RoomLayout JSON을 생성합니다.</pre>
       </div>
     </section>
 
@@ -110,6 +238,84 @@
         일반 위험은 화면·LED 중심으로 알리고,
         Critical Zone에서만 선택적으로 경고음을 사용합니다.
       </p>
+
+      <section class="live-device-section">
+        <div class="live-device-head">
+          <div>
+            <span class="tag">LIVE DEVICE</span>
+            <h3>실시간 센서 · Arduino 상태</h3>
+          </div>
+          <span id="liveDeviceBadge" class="live-badge offline">
+            OFFLINE
+          </span>
+        </div>
+
+        <div class="live-sensor-dashboard">
+          <article class="sensor-reading-card">
+            <span class="sensor-card-label">HC-SR04 거리 측정</span>
+            <strong id="liveSensorValue">--</strong>
+            <span id="liveMeasurementStatus" class="measurement-status waiting">
+              데이터 대기
+            </span>
+          </article>
+
+          <article class="sensor-meta-card">
+            <div>
+              <span>데이터 구분</span>
+              <strong id="liveDataSource">연결 대기</strong>
+            </div>
+            <div>
+              <span>마지막 수신 시각</span>
+              <strong id="liveReceivedAt">-</strong>
+            </div>
+            <p>
+              거리 변화는 별도 센서 이벤트로 표시하며,
+              어린이 안전 위험을 직접 판정하지 않습니다.
+            </p>
+          </article>
+
+          <article class="sensor-event-card">
+            <div class="sensor-event-head">
+              <strong>최근 센서 이벤트</strong>
+              <small>브라우저 세션</small>
+            </div>
+            <div id="sensorEventList" class="sensor-event-list">
+              <p class="muted">수신된 센서 이벤트가 없습니다.</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="live-device-grid">
+          <div class="live-value">
+            <span>BRIDGE</span>
+            <strong id="liveBridge">OFFLINE</strong>
+          </div>
+          <div class="live-value">
+            <span>ARDUINO</span>
+            <strong id="liveArduino">NOT CONNECTED</strong>
+          </div>
+          <div class="live-value">
+            <span>TRANSPORT</span>
+            <strong id="liveTransport">NONE</strong>
+          </div>
+          <div class="live-value">
+            <span>LAST SENSOR</span>
+            <strong id="liveLastSeen">-</strong>
+          </div>
+          <div class="live-value">
+            <span>PASSAGE</span>
+            <strong id="livePassage">-</strong>
+          </div>
+          <div class="live-value">
+            <span>DEVICE</span>
+            <strong id="liveOutput">-</strong>
+          </div>
+        </div>
+
+        <p id="liveDeviceNote" class="live-device-note">
+          실제 장치 또는 Virtual Arduino 데이터 대기 중
+        </p>
+      </section>
 
       <div class="sensor-controls">
         <label class="sensor-field">
@@ -204,6 +410,9 @@
         <div>
           <span class="device-label">NEST SYSTEM OUTPUT</span>
           <strong id="deviceOverall">NEST SAFE</strong>
+          <small class="device-policy-note">
+            종합 위험등급 · 경고음은 Critical Zone 정책에 따름
+          </small>
         </div>
         <div class="device-values">
           <span>LED <b id="deviceLed">GREEN</b></span>
@@ -223,12 +432,14 @@
         Unity의 교실 배치와 Arduino 센서값을 동일한 NEST API로 연결합니다.
         공간분석과 센서 결과는 통합 엔진에서 6개 안전기능으로 결합됩니다.
       </p>
-      <pre>POST /api/v1/system/analyze
+      <pre>GET  /api/v1/device/live
+POST /api/v1/device/live
+POST /api/v1/system/analyze
 POST /api/v1/physical-twin/analyze
 POST /api/v1/analyze
 POST /api/v1/compare</pre>
     </section>
   </main>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=uno-live-1"></script>
 </body>
 </html>
