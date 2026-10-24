@@ -20,6 +20,7 @@ const state = {
   lastReceivedAt: null,
   lastSensorEventAt: 0,
   lastMeasurementStatus: null,
+  lastSensorState: null,
   lastConnectionKey: null,
   layers: {markers: true},
   toastTimer: null,
@@ -125,6 +126,14 @@ function sourceLabel(live = state.live) {
   return live.simulated ? 'SIMULATED' : 'REAL';
 }
 
+function isSensorRoom(room, live = state.live) {
+  return Boolean(live?.room_id && live.room_id === room.id);
+}
+
+function isSensorAttention(live = state.live) {
+  return live?.sensor_state === 'attention';
+}
+
 function updateClock() {
   const now = new Date();
   text('currentDate', new Intl.DateTimeFormat('ko-KR', {
@@ -166,16 +175,20 @@ function captureDeviceEvents(live) {
     drawTrend();
   }
   const now = Date.now();
-  const statusChanged = live.measurement_status !== state.lastMeasurementStatus;
+  const statusChanged = (
+    live.measurement_status !== state.lastMeasurementStatus
+    || live.sensor_state !== state.lastSensorState
+  );
   if (statusChanged || now - state.lastSensorEventAt >= 15000) {
     state.lastMeasurementStatus = live.measurement_status;
+    state.lastSensorState = live.sensor_state;
     state.lastSensorEventAt = now;
     addDeviceEvent({
       type: 'sensor',
-      title: 'HC-SR04 거리 측정',
-      detail: `${distanceLabel(live)} · ${sourceLabel(live)}`,
+      title: isSensorAttention(live) ? 'HC-SR04 근접 주의' : 'HC-SR04 거리 측정',
+      detail: `${live.room_id || '교실 미지정'} · ${distanceLabel(live)} · ${sourceLabel(live)}`,
       created_at: live.received_at,
-      status: live.measurement_status,
+      status: live.sensor_state || live.measurement_status,
     });
   }
 }
@@ -325,8 +338,14 @@ function markerPresentation(room) {
   if (call && ['accepted', 'responding'].includes(call.status)) {
     return {className: 'active', label: statusLabels[call.status], detail: call.accepted_by || elapsed(call.created_at)};
   }
-  if (room.deviceDemo && liveMode() !== 'online') return {className: 'offline', label: '장치 오프라인', detail: 'DEMO 위치'};
-  return {className: 'online', label: '정상', detail: room.deviceDemo ? 'REAL 데이터 · DEMO 위치' : '호출 없음'};
+  if (isSensorRoom(room)) {
+    const mode = liveMode();
+    if (mode === 'offline') return {className: 'offline', label: '장치 오프라인', detail: 'USB Serial'};
+    if (mode === 'delayed') return {className: 'offline', label: '데이터 지연', detail: '최근 수신 확인 필요'};
+    if (isSensorAttention()) return {className: 'active', label: '근접 주의', detail: `${distanceLabel()} · ${sourceLabel()}`};
+    return {className: 'online', label: '센서 정상', detail: `${distanceLabel()} · ${sourceLabel()}`};
+  }
+  return {className: 'online', label: '정상', detail: '호출 없음'};
 }
 
 function renderMarkers() {
@@ -336,15 +355,25 @@ function renderMarkers() {
 }
 
 function deviceStateFor(room) {
+  if (!state.live?.room_id) {
+    return `${sourceLabel()} 센서 연결 · 교실 위치 미등록`;
+  }
+  if (!isSensorRoom(room)) return '등록 장치 없음';
   const mode = liveMode();
-  if (mode === 'online') return `${sourceLabel()} 센서 연결 · 교실 위치 미등록`;
-  if (mode === 'delayed') return 'Arduino 데이터 지연 · 교실 위치 미등록';
-  return 'Arduino 오프라인 · 교실 위치 미등록';
+  if (mode === 'online') {
+    const status = isSensorAttention() ? '근접 주의' : '정상';
+    return `HC-SR04 ${status} · ${distanceLabel()} · ${sourceLabel()}`;
+  }
+  if (mode === 'delayed') return 'Arduino 데이터 지연';
+  return 'Arduino 오프라인';
 }
 
 function selectedStatus(room) {
   const active = activeRoomCall(room.id);
   if (active) return {label: statusLabels[active.status], className: active.status};
+  if (isSensorRoom(room) && isSensorAttention()) {
+    return {label: '센서 주의', className: 'sensor-attention'};
+  }
   return {label: '정상', className: 'idle'};
 }
 

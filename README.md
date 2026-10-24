@@ -75,12 +75,19 @@ source .venv/bin/activate
 pip install -r requirements.txt
 PYTHONPATH=. uvicorn app.main:app --reload --port 8000
 
-# Terminal 2 — verified Arduino UNO serial connection
+# Terminal 2 — discover and verify the current Arduino serial port
 cd /Users/gamjeong/nexus-nest
 source /Users/gamjeong/NEXUS_NEST_Hardware/.venv/bin/activate
+ls /dev/cu.usbserial-* /dev/cu.usbmodem-* 2>/dev/null
+
+# Example only: use the port printed by the command above.
+export NEST_SERIAL_PORT=/dev/cu.usbserial-110
+test -e "$NEST_SERIAL_PORT"
 python apps/bridge/nest_serial_bridge.py \
-  --port /dev/cu.usbserial-10 \
+  --port "$NEST_SERIAL_PORT" \
   --baud 9600 \
+  --room-id HM101 \
+  --distance-attention-cm 20 \
   --api http://127.0.0.1:8000
 ```
 
@@ -88,12 +95,18 @@ python apps/bridge/nest_serial_bridge.py \
 패키지 설치 명령은 생략할 수 있습니다. 하드웨어용 가상환경은 Serial
 Bridge 실행에 사용합니다.
 
-기본값은 동일한 포트와 baud를 사용하며 환경 변수로도 변경할 수 있습니다.
+macOS 장치 이름은 재연결 시 바뀔 수 있으므로 포트를 고정값으로 가정하지
+않습니다. Bridge 실행 전 위 검색 명령으로 현재 포트를 확인해야 합니다.
+포트는 `--port` 또는 환경 변수로 지정하고 baud 등은 환경 변수로도 변경할
+수 있습니다.
 
 ```bash
-export NEST_SERIAL_PORT=/dev/cu.usbserial-10
+# 현재 연결에서 확인한 값을 사용합니다. 아래 값은 2026-10-24 확인 예시입니다.
+export NEST_SERIAL_PORT=/dev/cu.usbserial-110
 export NEST_SERIAL_BAUD=9600
 export NEST_API_BASE=http://127.0.0.1:8000
+export NEST_ROOM_ID=HM101
+export NEST_DISTANCE_ATTENTION_CM=20
 python apps/bridge/nest_serial_bridge.py
 ```
 
@@ -101,6 +114,19 @@ python apps/bridge/nest_serial_bridge.py
 최근 수신 시각, 데이터 지연, 측정 범위 밖 상태를 구분해 표시합니다.
 HC-SR04 거리값은 별도 센서 이벤트이며 그 자체를 어린이 안전 위험으로
 판정하지 않습니다. 기존 JSON-lines Bridge 입력은 하위 호환을 위해 유지됩니다.
+
+`--distance-attention-cm`은 메이커톤 근접 시연을 위한 임시 임계값이며
+공식 안전기준이 아닙니다. 기본값 20cm 이하에서는 지정 교실 마커가
+`근접 주의`로 바뀌고, 임계값보다 멀어지거나 `OUT_OF_RANGE`가 수신되면
+정상 표시로 돌아옵니다. 원본 측정 상태는 `measurement_status`에 그대로
+보존됩니다.
+
+센서 최신 상태와 최근 이력은 다음 API로 확인합니다.
+
+```text
+GET /api/v1/device/live
+GET /api/v1/sensor-events?room_id=HM101&limit=50
+```
 
 ## 교직원 웹 호출
 
@@ -115,17 +141,16 @@ POST /api/v1/calls
 POST /api/v1/calls/{call_id}/transition
 ```
 
-## 아이소메트릭 DEMO 교실 지도
+## CAD 기반 Three.js 교실 지도
 
-통합 관제 화면에는 `햇살반`, `별님반`, `달님반`, `무지개반` 네 교실을
-표현한 아이소메트릭 DEMO 지도를 사용합니다. 배경은 실제 CAD/Unity 모델이
-아닌 독립 생성 이미지이며, 교실 이름과 상태 마커는 API 상태에 연결된
-HTML 오버레이입니다. 마커 좌표는 배경 이미지에 대한 상대 좌표로 관리되어
-확대·축소 및 화면 크기 변경 시에도 같은 교실 위치를 유지합니다.
+통합 관제 화면은 CAD와 현장 사진을 참고한 Three.js 근사 모델로 1층과
+2층을 표시합니다. 실측 치수 모델이나 Unity 결과물은 아니며, 교실 마커는
+호출 API와 센서 최신 상태에 연결됩니다. Serial Bridge의 `--room-id`가
+지도 교실 ID(`HM101`~`HM214`)와 일치할 때만 해당 교실에 센서 상태가
+표시됩니다. 호출 상태가 있으면 호출 표시가 센서 표시보다 우선합니다.
 
-햇살반의 HC-SR04 표시는 실제 센서 데이터와 연결되지만 지도상 위치는
-`DEMO 위치`입니다. 실제 설치 위치가 등록되기 전에는 운영 위치로 간주하지
-않습니다.
+메이커톤 현장 실행과 복구 순서는
+[`docs/makerthon-demo-runbook.md`](docs/makerthon-demo-runbook.md)를 참고합니다.
 
 ## Repository structure
 

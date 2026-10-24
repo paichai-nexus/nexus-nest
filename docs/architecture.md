@@ -32,3 +32,19 @@ Current ↔ Proposed Layout 비교
 3. 실제 수치 기준은 10/13 현장 확인과 교사·건축 관점 검토 후 수정한다.
 4. Unity와 Web이 같은 `RoomLayout` JSON 계약을 사용한다.
 5. 아동 개인 데이터는 MVP 입력에 포함하지 않는다.
+
+## 메이커톤 통합 데이터 흐름
+
+```text
+Arduino UNO + HC-SR04
+        ↓  DISTANCE:<cm> / DISTANCE:OUT_OF_RANGE
+USB Serial Bridge (REAL, room_id, demo threshold)
+        ↓  POST /api/v1/device/live
+FastAPI latest state + bounded sensor event history
+        ↓
+원장실 Web Dashboard / Unity read-only integration
+```
+
+HC-SR04의 근접 상태는 발표용 센서 이벤트이며 공간안전 분석 엔진의
+위험 후보와 자동 결합하지 않는다. 교직원 호출 상태는 별도 API와 상태
+머신으로 유지하고, 지도에서는 호출 상태를 센서 상태보다 우선 표시한다.

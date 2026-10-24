@@ -646,6 +646,7 @@ input { font-family: inherit; }
 .call-state.requested { color: #c82f3c; background: #ffe8eb; }
 .call-state.accepted,
 .call-state.responding { color: #9a6200; background: #fff0cf; }
+.call-state.sensor-attention { color: #9a6200; background: #fff0cf; }
 .selected-info p { margin-top: 5px; color: var(--muted); font-size: 12px; }
 .selected-actions { gap: 7px; }
 .selected-actions button,

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -22,9 +23,11 @@ from .models import (
     CallCreateRequest,
     CallTransitionRequest,
     StaffCallSnapshot,
+    SensorEventSnapshot,
 )
 from .device_state import (
     get_live_device,
+    get_sensor_events,
     update_live_device,
 )
 from .call_state import (
@@ -158,6 +161,20 @@ def update_device_state(
     update: LiveDeviceUpdate,
 ) -> LiveDeviceState:
     return update_live_device(update)
+
+
+@app.get(
+    "/api/v1/sensor-events",
+    response_model=SensorEventSnapshot,
+)
+def list_sensor_events(
+    room_id: Optional[str] = None,
+    limit: int = Query(default=50, ge=1, le=100),
+) -> SensorEventSnapshot:
+    return get_sensor_events(
+        room_id=room_id,
+        limit=limit,
+    )
 
 
 @app.get(

@@ -25,12 +25,16 @@ DEFAULT_API_BASE = os.getenv(
     "NEST_API_BASE",
     "http://127.0.0.1:8000",
 )
-DEFAULT_SERIAL_PORT = os.getenv(
-    "NEST_SERIAL_PORT",
-    "/dev/cu.usbserial-10",
-)
+DEFAULT_SERIAL_PORT = os.getenv("NEST_SERIAL_PORT")
 DEFAULT_BAUD = int(
     os.getenv("NEST_SERIAL_BAUD", "9600")
+)
+DEFAULT_ROOM_ID = os.getenv(
+    "NEST_ROOM_ID",
+    "HM101",
+)
+DEFAULT_DISTANCE_ATTENTION_CM = float(
+    os.getenv("NEST_DISTANCE_ATTENTION_CM", "20")
 )
 DEFAULT_TIMEOUT = 5.0
 DEFAULT_RETRIES = 3
@@ -213,6 +217,32 @@ def parse_serial_frame(line: str) -> Dict[str, Any]:
     }
 
 
+def proximity_state(
+    frame: Dict[str, Any],
+    attention_threshold_cm: float,
+) -> str:
+    """Classify a demo proximity event without making a safety judgment."""
+    if attention_threshold_cm <= 0:
+        raise BridgeProtocolError(
+            "attention threshold must be > 0"
+        )
+
+    if frame.get("measurement_status") == "out_of_range":
+        return "normal"
+
+    sensor = frame.get("sensor") or {}
+    distance = sensor.get("passage_cm")
+
+    if distance is None:
+        return "unavailable"
+
+    return (
+        "attention"
+        if float(distance) <= attention_threshold_cm
+        else "normal"
+    )
+
+
 def build_system_payload(
     layout: Dict[str, Any],
     sensors: Dict[str, Any],
@@ -271,10 +301,15 @@ def build_live_update(
     raw_sensor: Dict[str, Any],
     packet: Optional[Dict[str, Any]],
     measurement_status: Optional[str] = None,
+    room_id: Optional[str] = None,
+    sensor_type: Optional[str] = None,
+    sensor_state: Optional[str] = None,
+    attention_threshold_cm: Optional[float] = None,
 ) -> Dict[str, Any]:
+    live_room_id = room_id or layout["id"]
     sensor = normalize_sensor_snapshot(
         raw_sensor,
-        room_id=layout["id"],
+        room_id=live_room_id,
     )
 
     device = None
@@ -293,7 +328,7 @@ def build_live_update(
         "simulated": simulated,
         "bridge_connected": True,
         "arduino_connected": arduino_connected,
-        "room_id": layout["id"],
+        "room_id": live_room_id,
         "sensor": sensor,
         "device": device,
         "measurement_status": (
@@ -304,6 +339,9 @@ def build_live_update(
                 else "unavailable"
             )
         ),
+        "sensor_type": sensor_type,
+        "sensor_state": sensor_state,
+        "attention_threshold_cm": attention_threshold_cm,
         "error": None,
     }
 
@@ -311,13 +349,14 @@ def build_live_update(
 def build_bridge_status_update(
     connected: bool,
     error: Optional[str] = None,
+    room_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     return {
         "transport": "serial",
         "simulated": False,
         "bridge_connected": True,
         "arduino_connected": connected,
-        "room_id": None,
+        "room_id": room_id,
         "sensor": None,
         "device": None,
         "measurement_status": "unavailable",
@@ -631,6 +670,7 @@ def run_serial(args: argparse.Namespace) -> int:
         room_json=args.room_json,
         demo=args.demo,
     )
+    room_id = args.room_id or layout["id"]
 
     while True:
         try:
@@ -657,6 +697,7 @@ def run_serial(args: argparse.Namespace) -> int:
                     api_base=args.api,
                     update=build_bridge_status_update(
                         connected=True,
+                        room_id=room_id,
                     ),
                 )
 
@@ -685,6 +726,7 @@ def run_serial(args: argparse.Namespace) -> int:
                                 api_base=args.api,
                                 update=build_bridge_status_update(
                                     connected=True,
+                                    room_id=room_id,
                                 ),
                             )
                             continue
@@ -701,6 +743,15 @@ def run_serial(args: argparse.Namespace) -> int:
                                 measurement_status=frame[
                                     "measurement_status"
                                 ],
+                                room_id=room_id,
+                                sensor_type="hc_sr04",
+                                sensor_state=proximity_state(
+                                    frame,
+                                    args.distance_attention_cm,
+                                ),
+                                attention_threshold_cm=(
+                                    args.distance_attention_cm
+                                ),
                             )
 
                             publish_live_update(
@@ -719,6 +770,13 @@ def run_serial(args: argparse.Namespace) -> int:
                                         "distance_cm": raw_sensor[
                                             "passage_cm"
                                         ],
+                                        "room_id": room_id,
+                                        "sensor_state": update[
+                                            "sensor_state"
+                                        ],
+                                        "attention_threshold_cm": (
+                                            args.distance_attention_cm
+                                        ),
                                     },
                                     ensure_ascii=False,
                                     separators=(",", ":"),
@@ -788,6 +846,7 @@ def run_serial(args: argparse.Namespace) -> int:
                 update=build_bridge_status_update(
                     connected=False,
                     error=str(exc),
+                    room_id=room_id,
                 ),
             )
 
@@ -804,6 +863,7 @@ def run_serial(args: argparse.Namespace) -> int:
                 update={
                     **build_bridge_status_update(
                         connected=False,
+                        room_id=room_id,
                     ),
                     "bridge_connected": False,
                 },
@@ -893,8 +953,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--port",
         default=DEFAULT_SERIAL_PORT,
         help=(
-            "Serial port (default: NEST_SERIAL_PORT or "
-            "/dev/cu.usbserial-10)"
+            "Serial port (required for hardware mode; "
+            "or set NEST_SERIAL_PORT)"
         ),
     )
 
@@ -902,6 +962,25 @@ def build_parser() -> argparse.ArgumentParser:
         "--baud",
         type=int,
         default=DEFAULT_BAUD,
+    )
+
+    parser.add_argument(
+        "--room-id",
+        default=DEFAULT_ROOM_ID,
+        help=(
+            "Dashboard classroom id "
+            "(default: NEST_ROOM_ID or HM101)"
+        ),
+    )
+
+    parser.add_argument(
+        "--distance-attention-cm",
+        type=float,
+        default=DEFAULT_DISTANCE_ATTENTION_CM,
+        help=(
+            "Demo proximity attention threshold in cm "
+            "(not an official safety standard)"
+        ),
     )
 
     parser.add_argument(
@@ -937,6 +1016,11 @@ def main() -> int:
         parser.error(
             "--port is required unless "
             "--mock or --stdio is used"
+        )
+
+    if args.distance_attention_cm <= 0:
+        parser.error(
+            "--distance-attention-cm must be > 0"
         )
 
     return run_serial(args)

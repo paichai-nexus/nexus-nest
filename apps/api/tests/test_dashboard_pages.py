@@ -43,6 +43,8 @@ def test_dashboard_assets_are_served():
     assert javascript.status_code == 200
     assert "pollCalls" in javascript.text
     assert "NexusBuildingMap" in javascript.text
+    assert "sensor_state" in javascript.text
+    assert "근접 주의" in javascript.text
     assert building_javascript.status_code == 200
     assert all(room_id in building_javascript.text for room_id in ["HM101", "HM106", "HM201", "HM214"])
     assert "OrbitControls" in building_javascript.text
