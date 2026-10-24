@@ -10,6 +10,10 @@ const state = {
   focusedCallId: null,
   live: null,
   calls: {calls: [], events: [], summary: {requested: 0, active: 0, completed: 0, total: 0}},
+  callsLoaded: false,
+  seenRequestEvents: new Set(),
+  alertAudioContext: null,
+  alertSoundEnabled: false,
   deviceEvents: [],
   distances: [],
   eventFilter: 'all',
@@ -198,7 +202,27 @@ function renderLive(live) {
   renderSelectedRoom();
 }
 
+function playCallAlert() {
+  if (!state.alertSoundEnabled || !state.alertAudioContext) return;
+  const context = state.alertAudioContext;
+  const now = context.currentTime;
+  [0, 0.22].forEach((offset, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.frequency.value = index === 0 ? 880 : 660;
+    gain.gain.setValueAtTime(0.0001, now + offset);
+    gain.gain.exponentialRampToValueAtTime(0.16, now + offset + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.16);
+    oscillator.connect(gain); gain.connect(context.destination);
+    oscillator.start(now + offset); oscillator.stop(now + offset + 0.17);
+  });
+}
+
 function renderCalls(snapshot) {
+  const newRequests = snapshot.events.filter(event => event.type === 'requested' && !state.seenRequestEvents.has(event.id));
+  if (state.callsLoaded && newRequests.length) playCallAlert();
+  snapshot.events.filter(event => event.type === 'requested').forEach(event => state.seenRequestEvents.add(event.id));
+  state.callsLoaded = true;
   state.calls = snapshot;
   const {summary, calls} = snapshot;
   const inProgress = summary.requested + summary.active;
@@ -221,12 +245,14 @@ function renderCalls(snapshot) {
     text('recentCallElapsed', elapsed(recent.created_at));
   }
 
-  const newestActive = calls.find(call => call.status !== 'completed' && ROOMS.some(room => room.id === call.room_id));
+  const newestActive = calls.find(call => call.status !== 'completed');
   if (newestActive && newestActive.id !== state.focusedCallId) {
     state.focusedCallId = newestActive.id;
-    state.selectedRoomId = newestActive.room_id;
+    if (ROOMS.some(room => room.id === newestActive.room_id))
+      state.selectedRoomId = newestActive.room_id;
   }
   if (!newestActive) state.focusedCallId = null;
+  text('openCallDialog', newestActive ? '최근 호출 처리' : '웹 호출 요청');
 
   renderEvents();
   renderMarkers();
@@ -237,10 +263,12 @@ function renderCalls(snapshot) {
 function normalizedEvents() {
   const callEvents = state.calls.events.map(event => ({
     type: 'call',
-    title: statusLabels[event.type],
-    detail: `${event.room_name} · 웹 호출${event.actor ? ` · ${event.actor}` : ''}`,
+    title: event.type === 'requested'
+      ? (event.event_type === 'CRY_DETECTED' ? '울음 감지' : '교사 도움 요청')
+      : statusLabels[event.type],
+    detail: `${event.room_name} · ${event.source || '웹'}${event.actor ? ` · ${event.actor}` : ''}`,
     created_at: event.created_at,
-    status: event.type,
+    status: event.type === 'requested' ? (event.severity || '신규') : event.type,
   }));
   return [...callEvents, ...state.deviceEvents].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }
@@ -353,14 +381,21 @@ function selectRoom(roomId, syncMap = true) {
   updateDialog();
 }
 
+function currentDialogCall() {
+  const room = selectedRoom();
+  const focusedCall = state.calls.calls.find(call => call.id === state.focusedCallId);
+  const focusedRoomIsUnmapped = focusedCall && !ROOMS.some(item => item.id === focusedCall.room_id);
+  return activeRoomCall(room.id) || (focusedRoomIsUnmapped ? focusedCall : null);
+}
+
 function updateDialog() {
   const room = selectedRoom();
-  const call = activeRoomCall(room.id);
+  const call = currentDialogCall();
   const createView = document.getElementById('callCreateView');
   const actionView = document.getElementById('callActionView');
   createView.hidden = Boolean(call);
   actionView.hidden = !call;
-  document.getElementById('callRoomName').value = room.name;
+  document.getElementById('callRoomName').value = call ? call.room_name : room.name;
   if (call) {
     text('dialogCallStatus', statusLabels[call.status]);
     const next = nextActions[call.status];
@@ -385,7 +420,7 @@ async function createCall() {
   try {
     const snapshot = await requestJson('/api/v1/calls', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({room_id: room.id, room_name: room.name, requester: document.getElementById('callRequester').value.trim() || null}),
+      body: JSON.stringify({room_id: room.id, room_name: room.name, requester: document.getElementById('callRequester').value.trim() || null, event_type: 'TEACHER_CALL', severity: 'DANGER', source: 'web'}),
     });
     renderCalls(snapshot);
     showToast(`${room.name} 도움 요청이 등록되었습니다.`);
@@ -393,8 +428,7 @@ async function createCall() {
 }
 
 async function transitionCall() {
-  const room = selectedRoom();
-  const call = activeRoomCall(room.id);
+  const call = currentDialogCall();
   const next = call && nextActions[call.status];
   if (!call || !next) return;
   try {
@@ -403,7 +437,7 @@ async function transitionCall() {
       body: JSON.stringify({action: next.action, actor: document.getElementById('callActor').value.trim() || null}),
     });
     renderCalls(snapshot);
-    showToast(`${room.name} · ${next.label} 처리되었습니다.`);
+    showToast(`${call.room_name} · ${next.label} 처리되었습니다.`);
   } catch (error) { text('callDialogError', error.message); }
 }
 
@@ -437,6 +471,18 @@ async function pollCalls() {
 }
 
 function bind() {
+  document.getElementById('enableAlertSound').addEventListener('click', async event => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error('이 브라우저는 알림음을 지원하지 않습니다.');
+      state.alertAudioContext ||= new AudioContextClass();
+      await state.alertAudioContext.resume();
+      state.alertSoundEnabled = !state.alertSoundEnabled;
+      event.currentTarget.setAttribute('aria-pressed', String(state.alertSoundEnabled));
+      event.currentTarget.textContent = state.alertSoundEnabled ? '🔔 알림음 켜짐' : '🔕 알림음 꺼짐';
+      if (state.alertSoundEnabled) playCallAlert();
+    } catch (error) { showToast(error.message); }
+  });
   document.querySelectorAll('[data-pending]').forEach(button => button.addEventListener('click', () => showToast(button.dataset.pending)));
   document.querySelectorAll('[data-scroll]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.scroll).scrollIntoView({behavior:'smooth', block:'nearest'})));
   document.querySelectorAll('.event-filters button').forEach(button => button.addEventListener('click', () => {

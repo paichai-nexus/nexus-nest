@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NEXUS NEST · 원장실 통합 관제</title>
   <link rel="stylesheet" href="/static/dashboard-v2.css?v=isometric-1" />
-  <link rel="stylesheet" href="/static/dashboard-isometric.css?v=competition-final-1" />
+  <link rel="stylesheet" href="/static/dashboard-isometric.css?v=competition-final-3" />
 </head>
 <body>
   <div class="app-frame">
@@ -74,6 +74,7 @@
               <div id="recentCallEmpty" class="recent-empty"><strong>진행 중 호출 없음</strong><span>필요하면 웹 호출을 시작하세요.</span></div>
               <div id="recentCallSummary" class="recent-summary" hidden><i>!</i><span><strong id="recentCallRoom">-</strong><b id="recentCallStatus">-</b></span></div>
               <button id="openCallDialog" type="button">웹 호출 요청</button>
+              <button id="enableAlertSound" class="alert-sound-toggle" type="button" aria-pressed="false">🔔 알림음 켜기</button>
             </div>
             <div class="event-filters" role="group" aria-label="이벤트 필터"><button class="active" data-filter="all">전체</button><button data-filter="call">호출</button><button data-filter="sensor">센서</button><button data-filter="device">장치</button><button data-filter="environment">환경</button></div>
             <div id="eventList" class="event-list"><div class="empty-event"><b>이벤트 대기 중</b><span>실제 수신 이벤트만 표시합니다.</span></div></div>
@@ -143,6 +144,6 @@
     </form>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/static/dashboard-isometric.js?v=competition-final-1"></script>
+  <script type="module" src="/static/dashboard-isometric.js?v=competition-final-3"></script>
 </body>
 </html>

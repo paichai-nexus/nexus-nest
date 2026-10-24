@@ -288,6 +288,10 @@ class CallCreateRequest(BaseModel):
     room_id: str = Field(min_length=1, max_length=80)
     room_name: str = Field(min_length=1, max_length=80)
     requester: Optional[str] = Field(default=None, max_length=80)
+    event_type: Literal["CRY_DETECTED", "TEACHER_CALL"] = "TEACHER_CALL"
+    severity: Literal["WARNING", "DANGER"] = "WARNING"
+    source: str = Field(default="web", min_length=1, max_length=40)
+    event_id: Optional[str] = Field(default=None, max_length=120)
 
 
 class CallTransitionRequest(BaseModel):
@@ -300,6 +304,10 @@ class StaffCall(BaseModel):
     room_id: str
     room_name: str
     requester: Optional[str] = None
+    event_type: Literal["CRY_DETECTED", "TEACHER_CALL"] = "TEACHER_CALL"
+    severity: Literal["WARNING", "DANGER"] = "WARNING"
+    source: str = "web"
+    source_event_id: Optional[str] = None
     status: CallStatus
     accepted_by: Optional[str] = None
     created_at: datetime
@@ -313,6 +321,9 @@ class StaffCallEvent(BaseModel):
     room_id: str
     room_name: str
     type: Literal["requested", "accepted", "responding", "completed"]
+    event_type: Literal["CRY_DETECTED", "TEACHER_CALL"] = "TEACHER_CALL"
+    severity: Literal["WARNING", "DANGER"] = "WARNING"
+    source: str = "web"
     actor: Optional[str] = None
     created_at: datetime
 
