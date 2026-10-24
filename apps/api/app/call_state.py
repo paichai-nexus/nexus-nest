@@ -75,6 +75,10 @@ def create_call(payload: CallCreateRequest) -> StaffCallSnapshot:
         severity=payload.severity,
         source=payload.source,
         source_event_id=payload.event_id,
+        reason=payload.reason,
+        reason=payload.reason,
+        reason=payload.reason,
+        reason=payload.reason,
         status=CallStatus.REQUESTED,
         created_at=now,
         updated_at=now,
@@ -134,8 +138,28 @@ def transition_call(
         }
         if payload.action == "accept":
             update["accepted_by"] = payload.actor
+            update["accepted_at"] = now
+            update["accepted_at"] = now
+            update["accepted_at"] = now
+            update["accepted_at"] = now
+        if payload.action == "respond":
+            update["responding_by"] = payload.actor
+            update["responding_at"] = now
+        if payload.action == "respond":
+            update["responding_by"] = payload.actor
+            update["responding_at"] = now
+        if payload.action == "respond":
+            update["responding_by"] = payload.actor
+            update["responding_at"] = now
+        if payload.action == "respond":
+            update["responding_by"] = payload.actor
+            update["responding_at"] = now
         if payload.action == "complete":
             update["completed_at"] = now
+            update["response_seconds"] = round((now - current.created_at).total_seconds(), 3)
+            update["response_seconds"] = round((now - current.created_at).total_seconds(), 3)
+            update["response_seconds"] = round((now - current.created_at).total_seconds(), 3)
+            update["response_seconds"] = round((now - current.created_at).total_seconds(), 3)
 
         changed = current.model_copy(update=update)
         _calls[call_id] = changed

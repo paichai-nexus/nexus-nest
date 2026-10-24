@@ -345,6 +345,10 @@ class CallCreateRequest(BaseModel):
     severity: Literal["WARNING", "DANGER"] = "WARNING"
     source: str = Field(default="web", min_length=1, max_length=40)
     event_id: Optional[str] = Field(default=None, max_length=120)
+    reason: Optional[str] = Field(default=None, max_length=200)
+    reason: Optional[str] = Field(default=None, max_length=200)
+    reason: Optional[str] = Field(default=None, max_length=200)
+    reason: Optional[str] = Field(default=None, max_length=200)
 
 
 class CallTransitionRequest(BaseModel):
@@ -361,8 +365,13 @@ class StaffCall(BaseModel):
     severity: Literal["WARNING", "DANGER"] = "WARNING"
     source: str = "web"
     source_event_id: Optional[str] = None
+    reason: Optional[str] = None
     status: CallStatus
     accepted_by: Optional[str] = None
+    responding_by: Optional[str] = None
+    accepted_at: Optional[datetime] = None
+    responding_at: Optional[datetime] = None
+    response_seconds: Optional[float] = None
     created_at: datetime
     updated_at: datetime
     completed_at: Optional[datetime] = None

@@ -225,3 +225,27 @@ if WEB_DIR.exists():
     @app.get("/analysis")
     def analysis_page() -> FileResponse:
         return FileResponse(WEB_DIR / "index.html")
+
+
+if WEB_DIR.exists():
+    @app.get("/teacher", include_in_schema=False)
+    def teacher_page() -> FileResponse:
+        return FileResponse(WEB_DIR / "teacher.html")
+
+
+if WEB_DIR.exists():
+    @app.get("/teacher", include_in_schema=False)
+    def teacher_page() -> FileResponse:
+        return FileResponse(WEB_DIR / "teacher.html")
+
+
+if WEB_DIR.exists():
+    @app.get("/teacher", include_in_schema=False)
+    def teacher_page() -> FileResponse:
+        return FileResponse(WEB_DIR / "teacher.html")
+
+
+if WEB_DIR.exists():
+    @app.get("/teacher", include_in_schema=False)
+    def teacher_page() -> FileResponse:
+        return FileResponse(WEB_DIR / "teacher.html")
