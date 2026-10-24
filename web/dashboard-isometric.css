@@ -638,11 +638,11 @@ input { font-family: inherit; }
 
 .bottom-grid { gap: 14px; grid-template-columns: 1.08fr 1.4fr 1.08fr 1.06fr; }
 .bottom-card { padding: 15px; }
-.selected-body { grid-template-columns: 96px 1fr; gap: 14px; margin-top: 10px; }
+.selected-body { grid-template-columns: 96px 1fr; gap: 10px; margin-top: 5px; }
 .classroom-thumb { height: 84px; }
 .classroom-thumb span { font-size: 10px; }
 .selected-info h3 { margin-bottom: 6px; color: var(--text); font-size: 18px; }
-.call-state { padding: 5px 8px; font-size: 12px; }
+.call-state { padding: 1px 8px; font-size: 12px; }
 .call-state.requested { color: #c82f3c; background: #ffe8eb; }
 .call-state.accepted,
 .call-state.responding { color: #9a6200; background: #fff0cf; }
@@ -925,9 +925,9 @@ body { overflow: hidden; }
 .bottom-grid { min-width: 0; min-height: 0; grid-template-columns: 1.08fr 1.55fr 1fr; gap: 12px; }
 .bottom-card { height: 100%; min-width: 0; min-height: 0; padding: 14px; overflow: hidden; }
 .selected-info h3 { font-size: 20px; }
-.selected-info p { font-size: 12px; line-height: 1.25; }
+.selected-info p { font-size: 15px; line-height: 1.25; color: black; }
 .selected-actions button { height: 38px; font-size: 14px; }
-.sensor-main strong { font-size: 28px; }
+.sensor-main strong { font-size: 20px; }
 .device-grid { gap: 8px; }
 .device-grid > div { min-width: 0; }
 .device-grid strong { font-size: 13px; }
@@ -1020,4 +1020,108 @@ body { overflow: hidden; }
   .workspace { grid-template-columns: minmax(0, 1fr) 292px; }
   .bottom-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 205px; }
   .bottom-grid > :last-child { grid-column: 1 / -1; }
+}
+
+/*현재 선택된 교실 */
+.selected-room {
+  padding-top: 5px;
+}
+
+.selected-room .section-head h2 {
+  position: relative;
+  top: 0;
+}
+
+/* cad 3d 근사 사진 위치*/
+.selected-room .classroom-thumb {
+  top: 20px; /* 사진만 아래로 10px */
+}
+
+/* The map and event panel share fixed columns; events span both dashboard rows. */
+.dashboard[hidden],
+.call-overview[hidden] { display: none !important; }
+
+.dashboard {
+  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-rows: minmax(0, 1fr) minmax(11.5rem, 26%);
+}
+.dashboard > .map-card { grid-column: 1; grid-row: 1; }
+.dashboard > .bottom-grid {
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  min-height: 0;
+}
+.dashboard > .event-card { grid-column: 2; grid-row: 1 / 3; }
+.dashboard .bottom-card { min-width: 0; }
+
+.call-overview {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: clamp(1rem, 2vw, 2rem);
+}
+.call-overview > h2 { margin: 0 0 1.25rem; color: var(--text); font-size: 1.5rem; }
+.call-overview .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(8rem, auto); }
+.call-overview .kpi-card { height: auto; }
+
+.event-card { display: flex; flex-direction: column; min-height: 0; }
+.event-card > .section-head { flex: 0 0 auto; }
+.event-card .event-filters { flex: 0 0 auto; margin: 0.75rem 0; }
+.event-card .event-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.event-card .event-item { gap: 0.75rem; padding: 1rem 0.5rem; border-bottom: 1px solid var(--line); }
+.event-card .event-body strong { font-size: 1rem; line-height: 1.45; }
+.event-card .event-body b { font-size: 0.875rem; line-height: 1.4; }
+.event-card .event-body p { margin-top: 0.35rem; font-size: 0.875rem; line-height: 1.55; }
+.event-card .event-item time { font-size: 0.75rem; line-height: 1.5; }
+
+.selected-actions { grid-template-columns: minmax(0, 1fr); }
+.selected-actions button { width: 100%; }
+.selected-room .selected-info h3 { font-size: 1.25rem; }
+.selected-room .selected-info p { margin-top: 0.4rem; font-size: 0.875rem; line-height: 1.4; }
+.selected-info p:nth-of-type(2) { display: block; }
+
+.sensor-card { display: flex; flex-direction: column; }
+.sensor-card > .section-head { flex: 0 0 auto; }
+.sensor-card .sensor-main {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: clamp(0.5rem, 1vw, 1rem);
+  margin-top: 0.6rem;
+  padding: clamp(0.6rem, 1.4vw, 1.25rem);
+}
+.sensor-card .sensor-symbol {
+  width: clamp(3rem, 5vw, 4.5rem);
+  height: clamp(3rem, 5vw, 4.5rem);
+  font-size: clamp(1.5rem, 2vw, 2rem);
+}
+.sensor-card .sensor-main > div:nth-child(2) { min-width: 0; }
+.sensor-card .sensor-main span { font-size: 0.875rem; }
+.sensor-card .sensor-main strong { font-size: clamp(1.4rem, 2.4vw, 2rem); line-height: 1.2; overflow-wrap: anywhere; }
+.sensor-card .sensor-main b { font-size: 0.875rem; line-height: 1.4; }
+.sensor-card .sensor-main small { justify-self: end; font-size: 0.75rem; }
+
+@media (max-width: 1450px) {
+  .dashboard { grid-template-columns: minmax(0, 1fr) 310px; grid-template-rows: minmax(0, 1fr) minmax(11rem, 26%); }
+}
+
+@media (max-width: 1180px) {
+  .dashboard { height: calc(100vh - 72px); min-height: 36rem; grid-template-columns: minmax(0, 1fr) 292px; grid-template-rows: minmax(0, 1fr) minmax(11rem, 26%); }
+  .dashboard > .bottom-grid { grid-auto-rows: auto; }
+  .dashboard > .bottom-grid > :last-child { grid-column: auto; }
+}
+
+@media (max-width: 900px) {
+  .dashboard { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(22rem, 45vh) minmax(22rem, 45vh) auto; }
+  .dashboard > .event-card { grid-column: 1; grid-row: 2; }
+  .dashboard > .bottom-grid { grid-row: 3; }
+  .call-overview .kpi-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 620px) {
+  .dashboard > .bottom-grid { grid-template-columns: minmax(0, 1fr); }
+  .sensor-card { min-height: 12rem; }
 }

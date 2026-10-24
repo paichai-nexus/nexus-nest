@@ -15,7 +15,6 @@ const state = {
   alertAudioContext: null,
   alertSoundEnabled: false,
   deviceEvents: [],
-  distances: [],
   eventFilter: 'all',
   lastReceivedAt: null,
   lastSensorEventAt: 0,
@@ -25,8 +24,6 @@ const state = {
   toastTimer: null,
 };
 
-const trendCanvas = document.getElementById('distanceTrend');
-const trendCtx = trendCanvas.getContext('2d');
 const mapStage = document.getElementById('mapStage');
 let buildingMap = null;
 
@@ -131,8 +128,6 @@ function updateClock() {
     year:'numeric', month:'2-digit', day:'2-digit', weekday:'short',
   }).format(now));
   text('currentTime', clock(now).slice(0, 5));
-  const latest = state.calls.calls[0];
-  text('recentCallElapsed', latest ? elapsed(latest.created_at) : '-');
   renderMarkers();
   renderSelectedRoom();
 }
@@ -159,12 +154,6 @@ function captureDeviceEvents(live) {
 
   if (!live.received_at || live.received_at === state.lastReceivedAt) return;
   state.lastReceivedAt = live.received_at;
-  const value = live.sensor?.passage_cm;
-  if (Number.isFinite(value)) {
-    state.distances.push({value, at: new Date(live.received_at)});
-    state.distances = state.distances.slice(-28);
-    drawTrend();
-  }
   const now = Date.now();
   const statusChanged = live.measurement_status !== state.lastMeasurementStatus;
   if (statusChanged || now - state.lastSensorEventAt >= 15000) {
@@ -189,10 +178,6 @@ function renderLive(live) {
   text('arduinoTopLabel', online ? 'Arduino 연결됨' : mode === 'delayed' ? 'Arduino 데이터 지연' : 'Arduino 오프라인');
   text('arduinoTopSub', live.simulated ? 'SIMULATED' : 'USB Serial');
   document.getElementById('arduinoTopDot').className = `dot ${online ? 'online' : mode === 'delayed' ? 'delayed' : 'off'}`;
-  document.getElementById('arduinoDot').className = `dot ${online ? 'online' : mode === 'delayed' ? 'delayed' : 'off'}`;
-  document.getElementById('sensorDot').className = `dot ${online ? 'online' : mode === 'delayed' ? 'delayed' : 'off'}`;
-  text('arduinoState', online ? `연결됨 · ${live.simulated ? 'SIMULATED' : 'USB Serial'}` : mode === 'delayed' ? '데이터 지연' : '미연결');
-  text('deviceDistance', distanceLabel(live));
   text('distanceValue', distanceLabel(live));
   text('distanceStatus', online ? '정상 수신' : mode === 'delayed' ? '데이터 지연' : '미연결');
   text('sensorSource', `${sourceLabel(live)} · ${live.transport?.toUpperCase() || 'NONE'}`);
@@ -236,15 +221,6 @@ function renderCalls(snapshot) {
   text('sideCallCount', inProgress);
   document.getElementById('sideCallCount').hidden = inProgress === 0;
 
-  const recent = calls[0];
-  document.getElementById('recentCallEmpty').hidden = Boolean(recent);
-  document.getElementById('recentCallSummary').hidden = !recent;
-  if (recent) {
-    text('recentCallRoom', recent.room_name);
-    text('recentCallStatus', statusLabels[recent.status]);
-    text('recentCallElapsed', elapsed(recent.created_at));
-  }
-
   const newestActive = calls.find(call => call.status !== 'completed');
   if (newestActive && newestActive.id !== state.focusedCallId) {
     state.focusedCallId = newestActive.id;
@@ -252,8 +228,6 @@ function renderCalls(snapshot) {
       state.selectedRoomId = newestActive.room_id;
   }
   if (!newestActive) state.focusedCallId = null;
-  text('openCallDialog', newestActive ? '최근 호출 처리' : '웹 호출 요청');
-
   renderEvents();
   renderMarkers();
   renderSelectedRoom();
@@ -288,35 +262,17 @@ function renderEvents() {
     <p>${escapeHtml(event.detail)}</p></div><time>${clock(new Date(event.created_at))}</time></article>`).join('');
 }
 
-function drawTrend() {
-  const rect = trendCanvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  trendCanvas.width = Math.max(1, Math.round(rect.width * dpr));
-  trendCanvas.height = Math.max(1, Math.round(rect.height * dpr));
-  trendCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  trendCtx.clearRect(0, 0, rect.width, rect.height);
-  trendCtx.strokeStyle = '#dce8f4';
-  trendCtx.lineWidth = 1;
-  [10, 26, 42].forEach(y => {
-    trendCtx.beginPath(); trendCtx.moveTo(0, y); trendCtx.lineTo(rect.width, y); trendCtx.stroke();
-  });
-  if (state.distances.length < 2) return;
-  const values = state.distances.map(item => item.value);
-  const min = Math.min(...values);
-  const range = Math.max(Math.max(...values) - min, 10);
-  trendCtx.strokeStyle = '#1780f3';
-  trendCtx.lineWidth = 2;
-  trendCtx.beginPath();
-  values.forEach((value, index) => {
-    const x = index / (values.length - 1) * (rect.width - 8) + 4;
-    const y = 38 - (value - min) / range * 28;
-    index ? trendCtx.lineTo(x, y) : trendCtx.moveTo(x, y);
-  });
-  trendCtx.stroke();
-}
-
 function layoutMap() {
   buildingMap?.resize();
+}
+
+function syncView() {
+  const showingCalls = window.location.hash === '#calls';
+  document.getElementById('dashboardView').hidden = showingCalls;
+  document.getElementById('callOverview').hidden = !showingCalls;
+  document.querySelector('.side-nav a[href="/"]').classList.toggle('active', !showingCalls);
+  document.querySelector('[data-view="calls"]').classList.toggle('active', showingCalls);
+  if (!showingCalls) requestAnimationFrame(layoutMap);
 }
 
 function markerPresentation(room) {
@@ -354,13 +310,8 @@ function renderSelectedRoom() {
   const active = activeRoomCall(room.id);
   const status = selectedStatus(room);
   text('selectedRoomName', room.name);
-  text('selectedCallState', status.label);
-  document.getElementById('selectedCallState').className = `call-state ${status.className}`;
-  text('selectedRecentCall', latest ? statusLabels[latest.status] : '없음');
   text('selectedCallTime', latest ? shortClock(latest.created_at) : '-');
-  text('supportTeacher', latest?.accepted_by || '미배정');
-  text('selectedDeviceState', deviceStateFor(room));
-  text('selectedRoomAction', active ? '호출 상태 관리' : '웹 호출 요청');
+  text('supportTeacher', active?.accepted_by || '미배정');
 
   text('detailRoomName', room.name);
   text('detailCallState', status.label);
@@ -471,20 +422,19 @@ async function pollCalls() {
 }
 
 function bind() {
-  document.getElementById('enableAlertSound').addEventListener('click', async event => {
-    try {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) throw new Error('이 브라우저는 알림음을 지원하지 않습니다.');
-      state.alertAudioContext ||= new AudioContextClass();
-      await state.alertAudioContext.resume();
-      state.alertSoundEnabled = !state.alertSoundEnabled;
-      event.currentTarget.setAttribute('aria-pressed', String(state.alertSoundEnabled));
-      event.currentTarget.textContent = state.alertSoundEnabled ? '🔔 알림음 켜짐' : '🔕 알림음 꺼짐';
-      if (state.alertSoundEnabled) playCallAlert();
-    } catch (error) { showToast(error.message); }
+  document.querySelector('[data-view="calls"]').addEventListener('click', () => {
+    window.location.hash = 'calls';
+    syncView();
   });
+  window.addEventListener('hashchange', syncView);
   document.querySelectorAll('[data-pending]').forEach(button => button.addEventListener('click', () => showToast(button.dataset.pending)));
-  document.querySelectorAll('[data-scroll]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.scroll).scrollIntoView({behavior:'smooth', block:'nearest'})));
+  document.querySelectorAll('[data-scroll]').forEach(button => button.addEventListener('click', () => {
+    if (window.location.hash === '#calls') {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      syncView();
+    }
+    requestAnimationFrame(() => document.getElementById(button.dataset.scroll)?.scrollIntoView({behavior:'smooth', block:'nearest'}));
+  }));
   document.querySelectorAll('.event-filters button').forEach(button => button.addEventListener('click', () => {
     document.querySelectorAll('.event-filters button').forEach(item => item.classList.remove('active'));
     button.classList.add('active'); state.eventFilter = button.dataset.filter; renderEvents();
@@ -499,8 +449,6 @@ function bind() {
     if (state.floor !== 0) state.selectedRoomId = BUILDING_ROOMS.find(room => room.floor === state.floor).id;
     selectRoom(state.selectedRoomId, false);
   }));
-  document.getElementById('openCallDialog').addEventListener('click', openCallDialog);
-  document.getElementById('selectedRoomAction').addEventListener('click', openCallDialog);
   document.getElementById('createCallButton').addEventListener('click', createCall);
   document.getElementById('transitionCallButton').addEventListener('click', transitionCall);
   document.getElementById('roomDetailButton').addEventListener('click', openRoomDialog);
@@ -521,7 +469,7 @@ function bind() {
     if (!document.fullscreenElement) await viewport.requestFullscreen(); else await document.exitFullscreen();
   });
   document.addEventListener('fullscreenchange', layoutMap);
-  window.addEventListener('resize', () => { layoutMap(); drawTrend(); });
+  window.addEventListener('resize', layoutMap);
 }
 
 async function start() {
@@ -542,6 +490,7 @@ async function start() {
     console.error('Three.js building map initialization failed', error);
   }
   bind();
+  syncView();
   updateFloorControls();
   updateClock();
   setInterval(updateClock, 1000);
