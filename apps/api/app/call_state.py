@@ -35,6 +35,9 @@ def _event(call: StaffCall, event_type: str, actor: str | None) -> None:
             room_id=call.room_id,
             room_name=call.room_name,
             type=event_type,
+            event_type=call.event_type,
+            severity=call.severity,
+            source=call.source,
             actor=actor,
             created_at=_now(),
         )
@@ -68,11 +71,24 @@ def create_call(payload: CallCreateRequest) -> StaffCallSnapshot:
         room_id=payload.room_id,
         room_name=payload.room_name,
         requester=payload.requester,
+        event_type=payload.event_type,
+        severity=payload.severity,
+        source=payload.source,
+        source_event_id=payload.event_id,
         status=CallStatus.REQUESTED,
         created_at=now,
         updated_at=now,
     )
     with _lock:
+        if payload.event_id:
+            duplicate_event = next(
+                (item for item in _calls.values()
+                 if item.source_event_id == payload.event_id
+                 and item.source == payload.source),
+                None,
+            )
+            if duplicate_event is not None:
+                return _snapshot()
         duplicate = any(
             item.room_id == payload.room_id
             and item.status != CallStatus.COMPLETED

@@ -101,3 +101,70 @@ def test_unknown_call_is_not_found():
     )
 
     assert response.status_code == 404
+
+
+def test_invalid_event_payload_uses_fastapi_detail_error():
+    response = client.post("/api/v1/calls", json={"room_id": "room-1"})
+
+    assert response.status_code == 422
+    assert isinstance(response.json()["detail"], list)
+
+
+def test_cry_event_records_source_and_is_idempotent():
+    payload = {
+        "room_id": "room-1",
+        "room_name": "테스트 교실",
+        "event_type": "CRY_DETECTED",
+        "severity": "WARNING",
+        "source": "microphone",
+        "event_id": "mic-42",
+    }
+    first = client.post("/api/v1/calls", json=payload)
+    retry = client.post("/api/v1/calls", json=payload)
+
+    assert first.status_code == 201
+    assert retry.status_code == 201
+    assert retry.json()["summary"]["total"] == 1
+    call = retry.json()["calls"][0]
+    assert call["event_type"] == "CRY_DETECTED"
+    assert call["source"] == "microphone"
+    assert call["status"] == "requested"
+    assert call["source_event_id"] == "mic-42"
+    assert client.get("/api/v1/calls").json()["events"][0]["severity"] == "WARNING"
+
+
+def test_teacher_call_event_transitions_through_all_states():
+    response = client.post(
+        "/api/v1/calls",
+        json={
+            "room_id": "room-1",
+            "room_name": "테스트 교실",
+            "event_type": "TEACHER_CALL",
+            "severity": "DANGER",
+            "source": "hardware",
+            "event_id": "button-17",
+        },
+    )
+    assert response.status_code == 201
+    call = response.json()["calls"][0]
+    assert call["event_type"] == "TEACHER_CALL"
+    assert call["status"] == "requested"
+
+    for action, expected in [
+        ("accept", "accepted"),
+        ("respond", "responding"),
+        ("complete", "completed"),
+    ]:
+        response = client.post(
+            f"/api/v1/calls/{call['id']}/transition",
+            json={"action": action, "actor": "원장"},
+        )
+        assert response.status_code == 200
+        call = response.json()["calls"][0]
+        assert call["status"] == expected
+
+    snapshot = client.get("/api/v1/calls").json()
+    assert snapshot["summary"]["completed"] == 1
+    assert [event["type"] for event in snapshot["events"]] == [
+        "completed", "responding", "accepted", "requested"
+    ]

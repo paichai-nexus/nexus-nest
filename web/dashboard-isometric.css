@@ -881,6 +881,19 @@ body { overflow: hidden; }
 .event-card { display: flex; flex-direction: column; padding: 14px; }
 .event-card > .section-head { flex: 0 0 30px; height: 30px; }
 .section-head h2 { font-size: 18px; }
+.alert-sound-toggle {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 12px;
+  color: #24527c;
+  background: #edf5fc;
+  border: 1px solid #c9dced;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.alert-sound-toggle[aria-pressed="true"] { color: #17643a; background: #e5f5eb; border-color: #9ed3ae; }
+
 .event-call-focus {
   flex: 0 0 auto;
   min-width: 0;

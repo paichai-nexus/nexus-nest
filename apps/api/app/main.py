@@ -44,7 +44,7 @@ WEB_DIR = BASE_DIR / "web"
 app = FastAPI(
     title="NEXUS NEST API",
     version="0.1.0",
-    description="Kindergarten classroom spatial-safety risk-candidate API",
+    description="Kindergarten classroom event response and spatial-safety API",
 )
 
 app.add_middleware(
