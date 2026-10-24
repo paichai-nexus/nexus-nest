@@ -268,6 +268,24 @@ class LiveDeviceUpdate(BaseModel):
             "unavailable",
         ]
     ] = None
+    sensor_type: Optional[
+        Literal[
+            "hc_sr04",
+            "sound",
+            "environment",
+        ]
+    ] = None
+    sensor_state: Optional[
+        Literal[
+            "normal",
+            "attention",
+            "unavailable",
+        ]
+    ] = None
+    attention_threshold_cm: Optional[float] = Field(
+        default=None,
+        gt=0,
+    )
     error: Optional[str] = None
 
 
@@ -275,6 +293,41 @@ class LiveDeviceState(LiveDeviceUpdate):
     received_at: Optional[str] = None
     stale: bool = True
     age_seconds: Optional[float] = None
+
+
+class SensorEvent(BaseModel):
+    id: str
+    room_id: str
+    sensor_type: Literal[
+        "hc_sr04",
+        "sound",
+        "environment",
+    ]
+    measurement_value: Optional[float] = None
+    unit: Optional[str] = None
+    measurement_status: Literal[
+        "ok",
+        "out_of_range",
+        "unavailable",
+    ]
+    sensor_state: Literal[
+        "normal",
+        "attention",
+        "unavailable",
+    ]
+    simulated: bool
+    transport: Literal[
+        "none",
+        "serial",
+        "stdio",
+        "mock",
+    ]
+    created_at: datetime
+
+
+class SensorEventSnapshot(BaseModel):
+    events: list[SensorEvent]
+    total: int
 
 
 class CallStatus(str, Enum):
