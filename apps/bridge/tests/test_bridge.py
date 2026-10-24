@@ -55,6 +55,25 @@ def test_parse_uno_bad_distance_is_rejected():
         bridge.parse_serial_frame("DISTANCE:unknown")
 
 
+@pytest.mark.parametrize(
+    "frame,expected",
+    [
+        ("DISTANCE:11.2", "attention"),
+        ("DISTANCE:45.0", "normal"),
+        ("DISTANCE:OUT_OF_RANGE", "normal"),
+    ],
+)
+def test_proximity_state_for_demo_threshold(frame, expected):
+    parsed = bridge.parse_serial_frame(frame)
+    assert bridge.proximity_state(parsed, 20.0) == expected
+
+
+def test_proximity_state_rejects_invalid_threshold():
+    parsed = bridge.parse_serial_frame("DISTANCE:11.2")
+    with pytest.raises(bridge.BridgeProtocolError):
+        bridge.proximity_state(parsed, 0)
+
+
 def test_normalize_sensor_snapshot():
     raw = {
         "passage_cm": "32.4",
@@ -286,13 +305,24 @@ def test_build_measurement_only_live_update():
         },
         packet=None,
         measurement_status="out_of_range",
+        room_id="HM101",
+        sensor_type="hc_sr04",
+        sensor_state="normal",
+        attention_threshold_cm=20,
     )
 
     assert update["sensor"]["passage_cm"] is None
     assert update["device"] is None
     assert update["measurement_status"] == "out_of_range"
+    assert update["room_id"] == "HM101"
+    assert update["sensor"]["room_id"] == "HM101"
+    assert update["sensor_type"] == "hc_sr04"
+    assert update["sensor_state"] == "normal"
+    assert update["attention_threshold_cm"] == 20
 
 
 def test_default_hardware_settings_match_verified_uno():
-    assert bridge.DEFAULT_SERIAL_PORT == "/dev/cu.usbserial-10"
+    assert bridge.DEFAULT_SERIAL_PORT is None
     assert bridge.DEFAULT_BAUD == 9600
+    assert bridge.DEFAULT_ROOM_ID == "HM101"
+    assert bridge.DEFAULT_DISTANCE_ATTENTION_CM == 20.0
