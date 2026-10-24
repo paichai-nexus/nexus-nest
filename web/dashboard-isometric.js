@@ -1,14 +1,12 @@
-const ROOMS = [
-  {id: 'sunshine', name: '햇살반', x: 32, y: 30, deviceDemo: true},
-  {id: 'star', name: '별님반', x: 68, y: 25, deviceDemo: false},
-  {id: 'moon', name: '달님반', x: 72, y: 50, deviceDemo: false},
-  {id: 'rainbow', name: '무지개반', x: 40, y: 53, deviceDemo: false},
-];
+import { BUILDING_ROOMS, NexusBuildingMap } from './dashboard-building.js';
+
+const ROOMS = BUILDING_ROOMS;
 
 const state = {
   roomLayout: null,
   analysis: null,
-  selectedRoomId: 'sunshine',
+  selectedRoomId: 'HM101',
+  floor: 1,
   focusedCallId: null,
   live: null,
   calls: {calls: [], events: [], summary: {requested: 0, active: 0, completed: 0, total: 0}},
@@ -19,14 +17,14 @@ const state = {
   lastSensorEventAt: 0,
   lastMeasurementStatus: null,
   lastConnectionKey: null,
-  zoom: 1,
-  layers: {markers: true, sensors: true, paths: true},
+  layers: {markers: true},
   toastTimer: null,
 };
 
 const trendCanvas = document.getElementById('distanceTrend');
 const trendCtx = trendCanvas.getContext('2d');
 const mapStage = document.getElementById('mapStage');
+let buildingMap = null;
 
 const statusLabels = {
   requested: '도움 요청',
@@ -195,8 +193,6 @@ function renderLive(live) {
   text('distanceStatus', online ? '정상 수신' : mode === 'delayed' ? '데이터 지연' : '미연결');
   text('sensorSource', `${sourceLabel(live)} · ${live.transport?.toUpperCase() || 'NONE'}`);
   text('sensorRealBadge', sourceLabel(live));
-  const sensorPin = document.getElementById('sensorPin');
-  sensorPin.classList.toggle('offline', !online);
   captureDeviceEvents(live);
   renderMarkers();
   renderSelectedRoom();
@@ -205,13 +201,16 @@ function renderLive(live) {
 function renderCalls(snapshot) {
   state.calls = snapshot;
   const {summary, calls} = snapshot;
-  text('activeCallCount', summary.active);
+  const inProgress = summary.requested + summary.active;
+  text('activeCallCount', inProgress);
   text('waitingCallCount', summary.requested);
+  text('respondingCallCount', summary.active);
   text('completedCallCount', summary.completed);
-  text('activeCallText', summary.active ? '지원 교직원 대응 중' : '현재 진행 중 없음');
-  text('waitingCallText', summary.requested ? '수락 대기 중' : '현재 대기 없음');
-  text('sideCallCount', summary.requested + summary.active);
-  document.getElementById('sideCallCount').hidden = summary.requested + summary.active === 0;
+  text('activeCallText', inProgress ? '확인이 필요한 호출' : '현재 진행 중 없음');
+  text('waitingCallText', summary.requested ? '교직원 수락 대기' : '수락 대기 없음');
+  text('respondingCallText', summary.active ? '교직원 대응 진행' : '현재 대응 없음');
+  text('sideCallCount', inProgress);
+  document.getElementById('sideCallCount').hidden = inProgress === 0;
 
   const recent = calls[0];
   document.getElementById('recentCallEmpty').hidden = Boolean(recent);
@@ -229,25 +228,10 @@ function renderCalls(snapshot) {
   }
   if (!newestActive) state.focusedCallId = null;
 
-  renderRecentCalls();
   renderEvents();
   renderMarkers();
   renderSelectedRoom();
   updateDialog();
-}
-
-function renderRecentCalls() {
-  const target = document.getElementById('recentCallList');
-  if (!state.calls.calls.length) {
-    target.innerHTML = '<div class="empty-row">호출 기록이 없습니다.</div>';
-    return;
-  }
-  target.innerHTML = state.calls.calls.slice(0, 5).map((call, index) => `
-    <div class="call-row ${call.status}">
-      <i>${index + 1}</i><span><strong>${escapeHtml(call.room_name)}</strong>
-      <small>${shortClock(call.created_at)} · ${escapeHtml(call.accepted_by || '담당자 미배정')}</small></span>
-      <b>${statusLabels[call.status]}</b>
-    </div>`).join('');
 }
 
 function normalizedEvents() {
@@ -304,14 +288,7 @@ function drawTrend() {
 }
 
 function layoutMap() {
-  const viewport = document.getElementById('mapViewport');
-  const rect = viewport.getBoundingClientRect();
-  const maxWidth = rect.width * 0.96;
-  const maxHeight = rect.height * 0.96;
-  const width = Math.max(320, Math.min(maxWidth, maxHeight * 16 / 9));
-  mapStage.style.width = `${width}px`;
-  mapStage.style.height = `${width * 9 / 16}px`;
-  mapStage.style.setProperty('--map-zoom', state.zoom);
+  buildingMap?.resize();
 }
 
 function markerPresentation(room) {
@@ -325,33 +302,21 @@ function markerPresentation(room) {
 }
 
 function renderMarkers() {
-  const target = document.getElementById('roomMarkers');
-  target.innerHTML = ROOMS.map(room => {
-    const view = markerPresentation(room);
-    const selected = room.id === state.selectedRoomId;
-    return `<button class="map-marker ${view.className}${selected ? ' selected' : ''}" type="button"
-      data-room-id="${room.id}" style="left:${room.x}%;top:${room.y}%" aria-pressed="${selected}"
-      aria-label="${room.name}, ${view.label}, ${view.detail}">
-      <i aria-hidden="true">●</i><span><strong>${room.name}</strong><b>${view.label}</b><small>${view.detail}</small></span>
-    </button>`;
-  }).join('');
-  target.querySelectorAll('.map-marker').forEach(marker => {
-    marker.addEventListener('click', () => selectRoom(marker.dataset.roomId));
-  });
+  if (!buildingMap) return;
+  ROOMS.forEach(room => buildingMap.setRoomPresentation(room.id, markerPresentation(room)));
+  buildingMap.selectRoom(state.selectedRoomId, false);
 }
 
 function deviceStateFor(room) {
-  if (!room.deviceDemo) return '등록 장치 없음';
   const mode = liveMode();
-  if (mode === 'online') return `${sourceLabel()} 데이터 · DEMO 위치`;
-  if (mode === 'delayed') return 'Arduino 데이터 지연 · DEMO 위치';
-  return 'Arduino 오프라인 · DEMO 위치';
+  if (mode === 'online') return `${sourceLabel()} 센서 연결 · 교실 위치 미등록`;
+  if (mode === 'delayed') return 'Arduino 데이터 지연 · 교실 위치 미등록';
+  return 'Arduino 오프라인 · 교실 위치 미등록';
 }
 
 function selectedStatus(room) {
   const active = activeRoomCall(room.id);
   if (active) return {label: statusLabels[active.status], className: active.status};
-  if (room.deviceDemo && liveMode() !== 'online') return {label: '장치 오프라인', className: 'offline'};
   return {label: '정상', className: 'idle'};
 }
 
@@ -378,8 +343,11 @@ function renderSelectedRoom() {
   text('detailCallAction', active ? '호출 상태 관리' : '웹 호출 요청');
 }
 
-function selectRoom(roomId) {
+function selectRoom(roomId, syncMap = true) {
   state.selectedRoomId = roomById(roomId).id;
+  if (state.floor !== 0) state.floor = selectedRoom().floor;
+  if (syncMap) buildingMap?.selectRoom(state.selectedRoomId, false);
+  updateFloorControls();
   renderMarkers();
   renderSelectedRoom();
   updateDialog();
@@ -444,9 +412,14 @@ async function loadRoomLayout() {
   state.analysis = await requestJson('/api/v1/analyze', {
     method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(state.roomLayout),
   });
-  text('mapSubtitle', `4개 DEMO 교실 · RoomLayout 분석 ${state.roomLayout.width_cm} × ${state.roomLayout.height_cm}cm 보존`);
+  text('mapSubtitle', `CAD 기반 ${ROOMS.length}개 실·복도 근사 모델 · RoomLayout 분석 기능 별도 보존`);
   layoutMap();
   renderMarkers();
+}
+
+function updateFloorControls() {
+  document.querySelectorAll('[data-floor]').forEach(button => button.classList.toggle('active', Number(button.dataset.floor) === state.floor));
+  text('floorLabel', state.floor === 0 ? '전체' : `${state.floor}층`);
 }
 
 async function pollLive() {
@@ -472,7 +445,13 @@ function bind() {
   }));
   document.querySelectorAll('[data-layer]').forEach(input => input.addEventListener('change', () => {
     state.layers[input.dataset.layer] = input.checked;
-    mapStage.classList.toggle(`hide-${input.dataset.layer}`, !input.checked);
+    buildingMap?.setLayerVisibility(input.dataset.layer, input.checked);
+  }));
+  document.querySelectorAll('[data-floor]').forEach(button => button.addEventListener('click', () => {
+    state.floor = Number(button.dataset.floor);
+    buildingMap?.setFloor(state.floor);
+    if (state.floor !== 0) state.selectedRoomId = BUILDING_ROOMS.find(room => room.floor === state.floor).id;
+    selectRoom(state.selectedRoomId, false);
   }));
   document.getElementById('openCallDialog').addEventListener('click', openCallDialog);
   document.getElementById('selectedRoomAction').addEventListener('click', openCallDialog);
@@ -483,13 +462,13 @@ function bind() {
     document.getElementById('roomDialog').close(); openCallDialog();
   });
   document.getElementById('zoomIn').addEventListener('click', () => {
-    state.zoom = Math.min(1.35, state.zoom + 0.1); layoutMap();
+    buildingMap?.zoom(-2.4);
   });
   document.getElementById('zoomOut').addEventListener('click', () => {
-    state.zoom = Math.max(0.8, state.zoom - 0.1); layoutMap();
+    buildingMap?.zoom(2.4);
   });
   document.getElementById('overviewButton').addEventListener('click', () => {
-    state.zoom = 1; layoutMap(); selectRoom('sunshine');
+    buildingMap?.resetView();
   });
   document.getElementById('fullscreenButton').addEventListener('click', async () => {
     const viewport = document.getElementById('mapViewport');
@@ -497,11 +476,27 @@ function bind() {
   });
   document.addEventListener('fullscreenchange', layoutMap);
   window.addEventListener('resize', () => { layoutMap(); drawTrend(); });
-  document.querySelector('.isometric-map').addEventListener('load', layoutMap);
 }
 
 async function start() {
+  try {
+    buildingMap = new NexusBuildingMap({
+      canvas: document.getElementById('buildingCanvas'),
+      labels: document.getElementById('roomMarkers'),
+      onRoomSelect: roomId => selectRoom(roomId, false),
+      onFloorChange: (floor, roomId) => {
+        state.floor = floor;
+        state.selectedRoomId = roomId;
+        updateFloorControls();
+        renderSelectedRoom();
+      },
+    });
+  } catch (error) {
+    document.getElementById('webglFallback').hidden = false;
+    console.error('Three.js building map initialization failed', error);
+  }
   bind();
+  updateFloorControls();
   updateClock();
   setInterval(updateClock, 1000);
   await Promise.all([loadRoomLayout(), pollLive(), pollCalls()]);
